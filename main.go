@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/ue-sho/ohako/db"
 )
 
@@ -11,5 +9,5 @@ func main() {
 	if err != nil {
 		return
 	}
-	fmt.Println(db.Name)
+	db.Run()
 }
