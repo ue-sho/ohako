@@ -1,6 +1,10 @@
 package db
 
 import (
+	"bufio"
+	"fmt"
+	"os"
+
 	"github.com/ue-sho/ohako/command"
 	"github.com/ue-sho/ohako/storage"
 )
@@ -13,7 +17,26 @@ func NewDB() (*Ohako, error) {
 	return &Ohako{storage: &storage.InMemory{}}, nil
 }
 
+func (o *Ohako) initialize() {
+	fmt.Println("ohako DB start")
+}
+
 func (o *Ohako) Run() {
-	comannd := command.ParseCommand()
-	comannd.Execute(o.storage)
+	o.initialize()
+	scanner := bufio.NewScanner(os.Stdin)
+	for {
+		fmt.Print(">> ")
+		scanner.Scan()
+		input := scanner.Text()
+		comannd := command.ParseCommand(input)
+		ret := comannd.Execute(o.storage)
+		fmt.Println(ret.Message)
+		if ret.IsQuit {
+			break
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, "Scanner error:", err)
+		return
+	}
 }
