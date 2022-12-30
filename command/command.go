@@ -1,10 +1,6 @@
 package command
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/ue-sho/ohako/storage"
 )
 
@@ -56,17 +52,6 @@ func (ac *AbortCommand) Execute(s storage.Storage) CommandResponse {
 type QuitCommand struct{}
 
 func (qc *QuitCommand) Execute(s storage.Storage) CommandResponse {
-	path := filepath.Join(".", "data.log")
-	df, err := os.Create(path)
-	if err != nil {
-		// return err
-		return CommandResponse{Message: "os.Create error", IsQuit: false}
-	}
-	defer func() {
-		if err := df.Close(); err != nil {
-			fmt.Println("defer error")
-		}
-	}()
 	return CommandResponse{Message: "Terminate", IsQuit: true}
 }
 
