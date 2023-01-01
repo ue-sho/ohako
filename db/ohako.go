@@ -15,11 +15,13 @@ type Ohako struct {
 }
 
 func NewDB() (*Ohako, error) {
-	return &Ohako{storage: &storage.InMemory{}}, nil
+	storage := storage.NewInMemoryStorage()
+	return &Ohako{storage: storage}, nil
 }
 
-func (o *Ohako) initialize() {
+func (o *Ohako) initialize() error {
 	fmt.Println("ohako DB start")
+	return nil
 }
 
 func (o *Ohako) Run() {

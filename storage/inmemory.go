@@ -6,10 +6,15 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type InMemory struct {
 	storage map[string][]byte
+}
+
+func NewInMemoryStorage() *InMemory {
+	return &InMemory{storage: map[string][]byte{}}
 }
 
 func (im *InMemory) Insert(record Record) error {
@@ -44,7 +49,7 @@ func (im *InMemory) Commit() error {
 	}()
 
 	for key, value := range im.storage {
-		log := "{" + key + " : " + string(value) + "}\n"
+		log := key + ":" + string(value) + "\n"
 		file.WriteString(log)
 	}
 	return nil
@@ -53,21 +58,28 @@ func (im *InMemory) Commit() error {
 func (im *InMemory) Abort() error {
 	path := filepath.Join(".", "data.log")
 	file, err := os.Open(path)
-
 	if err != nil {
 		log.Fatalf("Error when opening file: %s", err)
 		return err
+	}
+	defer func() error {
+		err = file.Close()
+		return err
+	}()
+
+	for k := range im.storage {
+		delete(im.storage, k)
 	}
 
 	fileScanner := bufio.NewScanner(file)
 
 	for fileScanner.Scan() {
-		fmt.Println(fileScanner.Text())
+		data := strings.Split(fileScanner.Text(), ":")
+		im.storage[data[0]] = []byte(data[1])
 	}
 	if err := fileScanner.Err(); err != nil {
 		log.Fatalf("Error while reading file: %s", err)
 		return err
 	}
-	file.Close()
 	return nil
 }

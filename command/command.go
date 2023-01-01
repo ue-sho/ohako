@@ -18,8 +18,14 @@ type InsertCommand struct {
 }
 
 func (ic *InsertCommand) Execute(s storage.Storage) CommandResponse {
-
-	return CommandResponse{Message: "insert", IsQuit: false}
+	if len(ic.args) != 3 {
+		return CommandResponse{Message: "The number of arguments is invalid.\nusage: insert key value", IsQuit: false}
+	}
+	err := s.Insert(storage.Record{Key: ic.args[1], Value: []byte(ic.args[2])})
+	if err != nil {
+		return CommandResponse{Message: "Failed insert command", IsQuit: false}
+	}
+	return CommandResponse{Message: "Successful insert command", IsQuit: false}
 }
 
 type UpdateCommand struct {
@@ -27,7 +33,14 @@ type UpdateCommand struct {
 }
 
 func (uc *UpdateCommand) Execute(s storage.Storage) CommandResponse {
-	return CommandResponse{Message: "update", IsQuit: false}
+	if len(uc.args) != 3 {
+		return CommandResponse{Message: "The number of arguments is invalid.\nusage: update key value", IsQuit: false}
+	}
+	err := s.Update(storage.Record{Key: uc.args[1], Value: []byte(uc.args[2])})
+	if err != nil {
+		return CommandResponse{Message: "Failed update command", IsQuit: false}
+	}
+	return CommandResponse{Message: "Successful update command", IsQuit: false}
 }
 
 type DeleteCommand struct {
@@ -35,7 +48,14 @@ type DeleteCommand struct {
 }
 
 func (dc *DeleteCommand) Execute(s storage.Storage) CommandResponse {
-	return CommandResponse{Message: "delete", IsQuit: false}
+	if len(dc.args) != 2 {
+		return CommandResponse{Message: "The number of arguments is invalid.\nusage: delete key", IsQuit: false}
+	}
+	err := s.Delete(dc.args[1])
+	if err != nil {
+		return CommandResponse{Message: "Failed delete command", IsQuit: false}
+	}
+	return CommandResponse{Message: "Successful delete command", IsQuit: false}
 }
 
 type ReadCommand struct {
@@ -43,7 +63,14 @@ type ReadCommand struct {
 }
 
 func (rc *ReadCommand) Execute(s storage.Storage) CommandResponse {
-	return CommandResponse{Message: "read", IsQuit: false}
+	if len(rc.args) != 2 {
+		return CommandResponse{Message: "The number of arguments is invalid.\nusage: read key", IsQuit: false}
+	}
+	value, err := s.Read(rc.args[1])
+	if err != nil {
+		return CommandResponse{Message: "Failed read command", IsQuit: false}
+	}
+	return CommandResponse{Message: "value is " + string(value) + "\nSuccessful read command", IsQuit: false}
 }
 
 type CommitCommand struct {
@@ -51,7 +78,14 @@ type CommitCommand struct {
 }
 
 func (cc *CommitCommand) Execute(s storage.Storage) CommandResponse {
-	return CommandResponse{Message: "commit", IsQuit: false}
+	if len(cc.args) != 1 {
+		return CommandResponse{Message: "The number of arguments is invalid.", IsQuit: false}
+	}
+	err := s.Commit()
+	if err != nil {
+		return CommandResponse{Message: "Failed commit command", IsQuit: false}
+	}
+	return CommandResponse{Message: "Successful commit command", IsQuit: false}
 }
 
 type AbortCommand struct {
@@ -59,7 +93,14 @@ type AbortCommand struct {
 }
 
 func (ac *AbortCommand) Execute(s storage.Storage) CommandResponse {
-	return CommandResponse{Message: "abort", IsQuit: false}
+	if len(ac.args) != 1 {
+		return CommandResponse{Message: "The number of arguments is invalid.", IsQuit: false}
+	}
+	err := s.Abort()
+	if err != nil {
+		return CommandResponse{Message: "Failed abort command", IsQuit: false}
+	}
+	return CommandResponse{Message: "Successful abort command", IsQuit: false}
 }
 
 type QuitCommand struct {
@@ -67,6 +108,9 @@ type QuitCommand struct {
 }
 
 func (qc *QuitCommand) Execute(s storage.Storage) CommandResponse {
+	if len(qc.args) != 1 {
+		return CommandResponse{Message: "The number of arguments is invalid.", IsQuit: false}
+	}
 	return CommandResponse{Message: "Terminate", IsQuit: true}
 }
 
@@ -75,5 +119,5 @@ type InvalidCommand struct {
 }
 
 func (ivc *InvalidCommand) Execute(s storage.Storage) CommandResponse {
-	return CommandResponse{Message: "Command is invalid.", IsQuit: false}
+	return CommandResponse{Message: "Command is unknown.", IsQuit: false}
 }
