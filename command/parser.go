@@ -1,22 +1,22 @@
 package command
 
-func ParseCommand(input string) Command {
-	switch input {
+func ParseCommand(input []string) Command {
+	switch input[0] {
 	case "insert":
-		return &InsertCommand{}
+		return &InsertCommand{input}
 	case "update":
-		return &UpdateCommand{}
+		return &UpdateCommand{input}
 	case "delete":
-		return &DeleteCommand{}
+		return &DeleteCommand{input}
 	case "read":
-		return &ReadCommand{}
+		return &ReadCommand{input}
 	case "commit":
-		return &CommitCommand{}
+		return &CommitCommand{input}
 	case "abort":
-		return &AbortCommand{}
+		return &AbortCommand{input}
 	case "q", "quit":
-		return &QuitCommand{}
+		return &QuitCommand{input}
 	default:
-		return &InvalidCommand{}
+		return &InvalidCommand{input}
 	}
 }

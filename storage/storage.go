@@ -1,10 +1,10 @@
 package storage
 
 type Storage interface {
-	Insert(record Record)
-	Update(record Record)
-	Delete(key string)
-	Read(key string) []byte
+	Insert(record Record) error
+	Update(record Record) error
+	Delete(key string) error
+	Read(key string) ([]byte, error)
 	Commit() error
-	Abort()
+	Abort() error
 }

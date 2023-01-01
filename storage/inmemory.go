@@ -12,20 +12,23 @@ type InMemory struct {
 	storage map[string][]byte
 }
 
-func (im *InMemory) Insert(record Record) {
+func (im *InMemory) Insert(record Record) error {
 	im.storage[record.Key] = record.Value
+	return nil
 }
 
-func (im *InMemory) Update(record Record) {
+func (im *InMemory) Update(record Record) error {
 	im.storage[record.Key] = record.Value
+	return nil
 }
 
-func (im *InMemory) Delete(key string) {
+func (im *InMemory) Delete(key string) error {
 	delete(im.storage, key)
+	return nil
 }
 
-func (im *InMemory) Read(key string) []byte {
-	return im.storage[key]
+func (im *InMemory) Read(key string) ([]byte, error) {
+	return im.storage[key], nil
 }
 
 func (im *InMemory) Commit() error {
@@ -47,12 +50,13 @@ func (im *InMemory) Commit() error {
 	return nil
 }
 
-func (im *InMemory) Abort() {
+func (im *InMemory) Abort() error {
 	path := filepath.Join(".", "data.log")
 	file, err := os.Open(path)
 
 	if err != nil {
 		log.Fatalf("Error when opening file: %s", err)
+		return err
 	}
 
 	fileScanner := bufio.NewScanner(file)
@@ -62,6 +66,8 @@ func (im *InMemory) Abort() {
 	}
 	if err := fileScanner.Err(); err != nil {
 		log.Fatalf("Error while reading file: %s", err)
+		return err
 	}
 	file.Close()
+	return nil
 }

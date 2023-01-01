@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/ue-sho/ohako/command"
 	"github.com/ue-sho/ohako/storage"
@@ -27,7 +28,7 @@ func (o *Ohako) Run() {
 	for {
 		fmt.Print(">> ")
 		scanner.Scan()
-		input := scanner.Text()
+		input := strings.Split(scanner.Text(), " ")
 		comannd := command.ParseCommand(input)
 		ret := comannd.Execute(o.storage)
 		fmt.Println(ret.Message)
