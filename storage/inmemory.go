@@ -17,6 +17,29 @@ func NewInMemoryStorage() *InMemory {
 	return &InMemory{storage: map[string][]byte{}}
 }
 
+func (im *InMemory) Initialize() error {
+	path := filepath.Join(".", "data.log")
+	file, err := os.Open(path)
+	if err != nil {
+		log.Fatalf("Error when opening file: %s", err)
+		return err
+	}
+	defer func() error {
+		err = file.Close()
+		return err
+	}()
+
+	fileScanner := bufio.NewScanner(file)
+	for fileScanner.Scan() {
+		data := strings.Split(fileScanner.Text(), ":")
+		im.storage[data[0]] = []byte(data[1])
+	}
+	if err := fileScanner.Err(); err != nil {
+		log.Fatalf("Error while reading file: %s", err)
+		return err
+	}
+	return nil
+}
 func (im *InMemory) Insert(record Record) error {
 	if _, ok := im.storage[record.Key]; ok {
 		return fmt.Errorf("%s key already in use", record.Key)

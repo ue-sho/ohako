@@ -20,6 +20,7 @@ func NewDB() (*Ohako, error) {
 }
 
 func (o *Ohako) initialize() error {
+	o.storage.Initialize()
 	fmt.Println("ohako DB start")
 	return nil
 }

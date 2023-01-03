@@ -1,6 +1,7 @@
 package storage
 
 type Storage interface {
+	Initialize() error
 	Insert(record Record) error
 	Update(record Record) error
 	Delete(key string) error
