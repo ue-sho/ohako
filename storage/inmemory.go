@@ -18,11 +18,17 @@ func NewInMemoryStorage() *InMemory {
 }
 
 func (im *InMemory) Insert(record Record) error {
+	if _, ok := im.storage[record.Key]; ok {
+		return fmt.Errorf("%s key already in use", record.Key)
+	}
 	im.storage[record.Key] = record.Value
 	return nil
 }
 
 func (im *InMemory) Update(record Record) error {
+	if _, ok := im.storage[record.Key]; !ok {
+		return fmt.Errorf("%s key does not exist", record.Key)
+	}
 	im.storage[record.Key] = record.Value
 	return nil
 }
@@ -33,6 +39,9 @@ func (im *InMemory) Delete(key string) error {
 }
 
 func (im *InMemory) Read(key string) ([]byte, error) {
+	if _, ok := im.storage[key]; !ok {
+		return nil, fmt.Errorf("%s key does not exist", key)
+	}
 	return im.storage[key], nil
 }
 
