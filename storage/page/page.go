@@ -2,15 +2,16 @@ package page
 
 import "github.com/ue-sho/ohako/types"
 
-// PageSize is the size of a page in disk (4KB)
+// ページサイズ固定(4KB)
+// Linuxで使われているポピュラーなファイルシステムext4のデフォルトのブロックサイズが4096バイトであるため
 const PageSize = 4096
 
-// Page represents an abstract page on disk
+// ディスク上の抽象的なページ
 type Page struct {
-	id       types.PageID    // idenfies the page. It is used to find the offset of the page on disk
-	pinCount uint32          // counts how many goroutines are acessing it
-	isDirty  bool            // the page was modified but not flushed
-	data     *[PageSize]byte // bytes stored in disk
+	id       types.PageID    // ページを識別するID。ディスク上のページのオフセットを見つけるために使用される
+	pinCount uint32          // アクセスするゴルーチンの数
+	isDirty  bool            // ページが変更されたが、フラッシュされているかどうか
+	data     *[PageSize]byte // ディスクに格納されたデータ
 }
 
 // IncPinCount decrements pin count
