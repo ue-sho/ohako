@@ -5,6 +5,7 @@ import (
 
 	"github.com/ue-sho/ohako/storage/page"
 	testingpkg "github.com/ue-sho/ohako/testing"
+	"github.com/ue-sho/ohako/types"
 )
 
 func TestReadWritePage(t *testing.T) {
@@ -63,9 +64,9 @@ func TestAllocatePage(t *testing.T) {
 	pageId_3 := dm.AllocatePage()
 
 	// then: インクリメントしてIDが割り当てられる
-	testingpkg.Equals(t, 0, int(pageId_1))
-	testingpkg.Equals(t, 1, int(pageId_2))
-	testingpkg.Equals(t, 2, int(pageId_3))
+	testingpkg.Equals(t, types.PageID(0), pageId_1)
+	testingpkg.Equals(t, types.PageID(1), pageId_2)
+	testingpkg.Equals(t, types.PageID(2), pageId_3)
 }
 
 func memset(buffer []byte, value int) {

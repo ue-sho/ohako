@@ -5,12 +5,15 @@ import (
 	"errors"
 	"unsafe"
 
+	"github.com/spaolacci/murmur3"
 	"github.com/ue-sho/ohako/storage/buffer"
 	"github.com/ue-sho/ohako/storage/page"
 	"github.com/ue-sho/ohako/types"
-	"github.com/spaolacci/murmur3"
 )
 
+// Linear probing: ハッシュ値の衝突に対する解法。
+// Linear probingではLinked listとは違い，それぞれのバケットは最大で一つのエントリのみ入る。
+// 代わりに，ハッシュ値の衝突が起こった場合には，バケットをシーケンシャルに走査して空のバケットを探す。
 type LinearProbeHashTable struct {
 	headerPageId types.PageID
 	bpm          *buffer.BufferPoolManager
