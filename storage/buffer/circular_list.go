@@ -16,26 +16,27 @@ type circularList struct {
 	head     *node
 	tail     *node
 	size     uint32
-	capacity uint32
+	capacity uint32 // 最大サイズ
 }
 
+// headから辿って指定のkeyのnodeを探す
 func (c *circularList) find(key interface{}) *node {
 	ptr := c.head
 	for i := uint32(0); i < c.size; i++ {
 		if ptr.key == key {
 			return ptr
 		}
-
 		ptr = ptr.next
 	}
-
 	return nil
 }
 
+// keyを持っているか否か
 func (c *circularList) hasKey(key interface{}) bool {
 	return c.find(key) != nil
 }
 
+// nodeを挿入する
 func (c *circularList) insert(key interface{}, value interface{}) error {
 	if c.size == c.capacity {
 		return errors.New("capacity is full")
@@ -53,6 +54,7 @@ func (c *circularList) insert(key interface{}, value interface{}) error {
 
 	node := c.find(key)
 	if node != nil {
+		// keyが存在する場合valueを更新
 		node.value = value
 		return nil
 	}
@@ -62,6 +64,7 @@ func (c *circularList) insert(key interface{}, value interface{}) error {
 
 	c.tail.next = newNode
 	if c.head == c.tail {
+		// MEMO: 上記行と同じことをしているので、意味なさそう？
 		c.head.next = newNode
 	}
 
@@ -73,6 +76,7 @@ func (c *circularList) insert(key interface{}, value interface{}) error {
 	return nil
 }
 
+// keyのnodeを削除する
 func (c *circularList) remove(key interface{}) {
 	node := c.find(key)
 	if node == nil {

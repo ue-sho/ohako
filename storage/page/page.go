@@ -9,7 +9,7 @@ const PageSize = 4096
 // ディスク上の抽象的なページ
 type Page struct {
 	id       types.PageID    // ページを識別するID。ディスク上のページのオフセットを見つけるために使用される
-	pinCount uint32          // アクセスするゴルーチンの数
+	pinCount uint32          // アクセス数 セマフォ的な役割
 	isDirty  bool            // ページが変更されたが、フラッシュされているかどうか
 	data     *[PageSize]byte // ディスクに格納されたデータ
 }

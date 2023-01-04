@@ -1,15 +1,15 @@
 package buffer
 
-//FrameID is the type for frame id
 type FrameID uint32
 
-//ClockReplacer represents the clock replacer algorithm
+// クロック置換(ページ置換)アルゴリズム
+// Least Recently Used(最後に使われてからの経過時間が最も長い: LRU)を採用
 type ClockReplacer struct {
-	cList     *circularList
-	clockHand **node
+	cList     *circularList // 使わなくなったnodeを入れる円環リスト
+	clockHand **node        // 先頭nodeのポインタ
 }
 
-// Victim removes the victim frame as defined by the replacement policy
+// LRUアルゴリズムを元にVictimフレームを取得する(リストからは削除する)
 func (c *ClockReplacer) Victim() *FrameID {
 	if c.cList.size == 0 {
 		return nil
@@ -33,7 +33,8 @@ func (c *ClockReplacer) Victim() *FrameID {
 	}
 }
 
-//Unpin unpins a frame, indicating that it can now be victimized
+// フレームのピンを外す
+// フレームを使用しなくなったのでリストに追加する
 func (c *ClockReplacer) Unpin(id FrameID) {
 	if !c.cList.hasKey(id) {
 		c.cList.insert(id, true)
@@ -43,7 +44,8 @@ func (c *ClockReplacer) Unpin(id FrameID) {
 	}
 }
 
-//Pin pins a frame, indicating that it should not be victimized until it is unpinned
+// フレームをピンする
+// フレームを使っているのでリストから削除する
 func (c *ClockReplacer) Pin(id FrameID) {
 	node := c.cList.find(id)
 	if node == nil {
@@ -57,12 +59,12 @@ func (c *ClockReplacer) Pin(id FrameID) {
 
 }
 
-//Size returns the size of the clock
+// サイズ
 func (c *ClockReplacer) Size() uint32 {
 	return c.cList.size
 }
 
-//NewClockReplacer instantiates a new clock replacer
+// ClockReplacerを生成する
 func NewClockReplacer(poolSize uint32) *ClockReplacer {
 	cList := newCircularList(poolSize)
 	return &ClockReplacer{cList, &cList.head}
