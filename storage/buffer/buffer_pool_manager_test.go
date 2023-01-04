@@ -17,7 +17,7 @@ func TestBinaryData(t *testing.T) {
 	defer dm.ShutDown()
 	bpm := NewBufferPoolManager(poolSize, dm)
 
-	// Scenario: バッファプールは空。新しいページを作成する。
+	// シナリオ: バッファプールは空。最初のページはpageID=0が作成される
 	page0 := bpm.NewPage()
 	testingpkg.Equals(t, types.PageID(0), page0.ID())
 
@@ -32,34 +32,34 @@ func TestBinaryData(t *testing.T) {
 	var fixedRandomBinaryData [page.PageSize]byte
 	copy(fixedRandomBinaryData[:], randomBinaryData[:page.PageSize])
 
-	// Scenario: ページができれば、コンテンツの読み書きができる
+	// シナリオ: ページができれば、コンテンツの読み書きができる
 	page0.Copy(0, randomBinaryData)
 	testingpkg.Equals(t, fixedRandomBinaryData, *page0.Data())
 
-	// Scenario: バッファプールが一杯になるまで、新しいページを作ることができる
+	// シナリオ: バッファプールが一杯になるまで、新しいページを作ることができる
 	for i := uint32(1); i < poolSize; i++ {
 		p := bpm.NewPage()
 		testingpkg.Equals(t, types.PageID(i), p.ID())
 	}
 
-	// Scenario: バッファプールが一杯になったら、新しいページを作ることはできない
+	// シナリオ: バッファプールが一杯になったら、新しいページを作ることはできない
 	for i := poolSize; i < poolSize*2; i++ {
 		testingpkg.Equals(t, (*page.Page)(nil), bpm.NewPage())
 	}
 
-	// Scenario: ページ{0, 1, 2, 3, 4}のピンを解除する
-	// さらに4つの新しいページを固定した後は、ページ0を読むためのキャッシュフレームがまだ1つ残る
+	// シナリオ: ページ{0, 1, 2, 3, 4}のピンを解除し、ディスクへ書き込む
 	for i := 0; i < 5; i++ {
 		testingpkg.Ok(t, bpm.UnpinPage(types.PageID(i), true))
 		bpm.FlushPage(types.PageID(i))
 	}
-	// 4つをページ0を読むためのキャッシュフレームがまだ1つ残っています。
+	// 4つUnpinPageしたので、新規ページが作成できる
 	for i := 0; i < 4; i++ {
 		p := bpm.NewPage()
+		testingpkg.Equals(t, true, bpm.NewPage() != (*page.Page)(nil))
 		bpm.UnpinPage(p.ID(), false)
 	}
 
-	// Scenario: 先ほど書いたデータを取り出せる
+	// シナリオ: 先ほど書いたデータを取り出せる
 	page0 = bpm.FetchPage(types.PageID(0))
 	testingpkg.Equals(t, fixedRandomBinaryData, *page0.Data())
 	testingpkg.Ok(t, bpm.UnpinPage(types.PageID(0), true))
@@ -72,39 +72,39 @@ func TestSample(t *testing.T) {
 	defer dm.ShutDown()
 	bpm := NewBufferPoolManager(poolSize, dm)
 
-	// Scenario: バッファプールは空。新しいページを作成する。
+	// シナリオ: バッファプールは空。最初のページはpageID=0が作成される
 	page0 := bpm.NewPage()
 	testingpkg.Equals(t, types.PageID(0), page0.ID())
 
-	// Scenario: ページができれば、コンテンツの読み書きができる
+	// シナリオ: ページができれば、コンテンツの読み書きができる
 	page0.Copy(0, []byte("Hello"))
 	testingpkg.Equals(t, [page.PageSize]byte{'H', 'e', 'l', 'l', 'o'}, *page0.Data())
 
-	// Scenario: バッファプールが一杯になるまで、新しいページを作ることができる
+	// シナリオ: バッファプールが一杯になるまで、新しいページを作ることができる
 	for i := uint32(1); i < poolSize; i++ {
 		p := bpm.NewPage()
 		testingpkg.Equals(t, types.PageID(i), p.ID())
 	}
 
-	// Scenario: バッファプールが一杯になったら、新しいページを作ることはできない
+	// シナリオ: バッファプールが一杯になったら、新しいページを作ることはできない
 	for i := poolSize; i < poolSize*2; i++ {
 		testingpkg.Equals(t, (*page.Page)(nil), bpm.NewPage())
 	}
 
-	// Scenario: ページ{0, 1, 2, 3, 4}のピンを解除する
-	// さらに4つの新しいページを固定した後は、ページ0を読むためのキャッシュフレームがまだ1つ残る
+	// シナリオ: ページ{0, 1, 2, 3, 4}のピンを解除する
 	for i := 0; i < 5; i++ {
 		testingpkg.Ok(t, bpm.UnpinPage(types.PageID(i), true))
 		bpm.FlushPage(types.PageID(i))
 	}
+	// さらに4つの新しいページ作成. キャッシュフレームがまだ1つ残っている状態
 	for i := 0; i < 4; i++ {
 		bpm.NewPage()
 	}
-	// Scenario: 先ほど書いたデータを取り出せる
+	// シナリオ: 先ほど書いたデータを取り出せる
 	page0 = bpm.FetchPage(types.PageID(0))
 	testingpkg.Equals(t, [page.PageSize]byte{'H', 'e', 'l', 'l', 'o'}, *page0.Data())
 
-	// Scenario: ページ0のピンを解除し、新しいページを作成すると、バッファのすべてのページが固定される. ページ0の取得は失敗する
+	// シナリオ: ページ0のピンを解除し、新しいページを2つ作成すると、バッファのすべてのページが固定されページ0の取得は失敗する
 	testingpkg.Ok(t, bpm.UnpinPage(types.PageID(0), true))
 
 	testingpkg.Equals(t, types.PageID(14), bpm.NewPage().ID())

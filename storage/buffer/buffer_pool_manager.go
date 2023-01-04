@@ -27,6 +27,7 @@ func (b *BufferPoolManager) FetchPage(pageID types.PageID) *page.Page {
 
 	frameID, isFromFreeList := b.getFrameID()
 	if frameID == nil {
+		// バッファプールが全て使用中なのでnil
 		return nil
 	}
 
@@ -58,6 +59,7 @@ func (b *BufferPoolManager) FetchPage(pageID types.PageID) *page.Page {
 }
 
 // バッファプールからターゲットページのピンを外す
+// ページを使用しなくなった場合に使用する
 func (b *BufferPoolManager) UnpinPage(pageID types.PageID, isDirty bool) error {
 	if frameID, ok := b.pageTable[pageID]; ok {
 		pg := b.pages[frameID]
@@ -108,6 +110,7 @@ func (b *BufferPoolManager) NewPage() *page.Page {
 		currentPage := b.pages[*frameID]
 		if currentPage != nil {
 			if currentPage.IsDirty() {
+				// 変更があったらDiskに書き込む
 				data := currentPage.Data()
 				b.diskManager.WritePage(currentPage.ID(), data[:])
 			}
