@@ -1,20 +1,18 @@
 package disk
 
 import (
-	"io/ioutil"
 	"os"
 )
 
-//DiskManagerTest is the disk implementation of DiskManager for testing purposes
+// テスト用のDiskManager
 type DiskManagerTest struct {
 	path string
 	DiskManager
 }
 
-// NewDiskManagerTest returns a DiskManager instance for testing purposes
+// テスト用のDiskManagerインスタンスを生成する
 func NewDiskManagerTest() DiskManager {
-	// Retrieve a temporary path.
-	f, err := ioutil.TempFile("", "")
+	f, err := os.CreateTemp("", "")
 	if err != nil {
 		panic(err)
 	}
@@ -26,7 +24,7 @@ func NewDiskManagerTest() DiskManager {
 	return &DiskManagerTest{path, diskManager}
 }
 
-// ShutDown closes of the database file
+// データベースファイルをクローズする
 func (d *DiskManagerTest) ShutDown() {
 	defer os.Remove(d.path)
 	d.DiskManager.ShutDown()

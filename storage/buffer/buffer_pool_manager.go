@@ -8,7 +8,6 @@ import (
 	"github.com/ue-sho/ohako/types"
 )
 
-//BufferPoolManager represents the buffer pool manager
 type BufferPoolManager struct {
 	diskManager disk.DiskManager
 	pages       []*page.Page
@@ -17,9 +16,8 @@ type BufferPoolManager struct {
 	pageTable   map[types.PageID]FrameID
 }
 
-// FetchPage fetches the requested page from the buffer pool.
+// バッファプールから要求されたページを取り出す
 func (b *BufferPoolManager) FetchPage(pageID types.PageID) *page.Page {
-	// if it is on buffer pool return it
 	if frameID, ok := b.pageTable[pageID]; ok {
 		pg := b.pages[frameID]
 		pg.IncPinCount()
@@ -27,14 +25,13 @@ func (b *BufferPoolManager) FetchPage(pageID types.PageID) *page.Page {
 		return pg
 	}
 
-	// get the id from free list or from replacer
 	frameID, isFromFreeList := b.getFrameID()
 	if frameID == nil {
 		return nil
 	}
 
 	if !isFromFreeList {
-		// remove page from current frame
+		// 現在のフレームからページを削除する
 		currentPage := b.pages[*frameID]
 		if currentPage != nil {
 			if currentPage.IsDirty() {
@@ -60,7 +57,7 @@ func (b *BufferPoolManager) FetchPage(pageID types.PageID) *page.Page {
 	return pg
 }
 
-// UnpinPage unpins the target page from the buffer pool.
+// バッファプールからターゲットページのピンを外す
 func (b *BufferPoolManager) UnpinPage(pageID types.PageID, isDirty bool) error {
 	if frameID, ok := b.pageTable[pageID]; ok {
 		pg := b.pages[frameID]
@@ -82,7 +79,7 @@ func (b *BufferPoolManager) UnpinPage(pageID types.PageID, isDirty bool) error {
 	return errors.New("could not find page")
 }
 
-// FlushPage Flushes the target page to disk.
+// ターゲットページをフラッシュする(ディスクへ書き込む)
 func (b *BufferPoolManager) FlushPage(pageID types.PageID) bool {
 	if frameID, ok := b.pageTable[pageID]; ok {
 		pg := b.pages[frameID]
@@ -98,15 +95,16 @@ func (b *BufferPoolManager) FlushPage(pageID types.PageID) bool {
 	return false
 }
 
-// NewPage allocates a new page in the buffer pool with the disk manager help
+// バッファプールとディスクマネージャーに新しいページを割り当てる。
 func (b *BufferPoolManager) NewPage() *page.Page {
 	frameID, isFromFreeList := b.getFrameID()
 	if frameID == nil {
-		return nil // the buffer is full, it can't find a frame
+		// バッファが一杯になると、フレームが見つからなくなる
+		return nil
 	}
 
 	if !isFromFreeList {
-		// remove page from current frame
+		// 現在のフレームからページを削除する
 		currentPage := b.pages[*frameID]
 		if currentPage != nil {
 			if currentPage.IsDirty() {
@@ -118,7 +116,6 @@ func (b *BufferPoolManager) NewPage() *page.Page {
 		}
 	}
 
-	// allocates new page
 	pageID := b.diskManager.AllocatePage()
 	pg := page.NewEmpty(pageID)
 
@@ -128,7 +125,7 @@ func (b *BufferPoolManager) NewPage() *page.Page {
 	return pg
 }
 
-// DeletePage deletes a page from the buffer pool.
+// バッファプールからページを削除する
 func (b *BufferPoolManager) DeletePage(pageID types.PageID) error {
 	var frameID FrameID
 	var ok bool
@@ -151,7 +148,7 @@ func (b *BufferPoolManager) DeletePage(pageID types.PageID) error {
 
 }
 
-// FlushAllpages flushes all the pages in the buffer pool to disk.
+// バッファプール内の全ページをフラッシュする(ディスクに書き込む)
 func (b *BufferPoolManager) FlushAllpages() {
 	for pageID := range b.pageTable {
 		b.FlushPage(pageID)
@@ -169,7 +166,7 @@ func (b *BufferPoolManager) getFrameID() (*FrameID, bool) {
 	return (*b.replacer).Victim(), false
 }
 
-//NewBufferPoolManager returns a empty buffer pool manager
+// 空のバッファプールマネージャを生成する
 func NewBufferPoolManager(poolSize uint32, DiskManager disk.DiskManager) *BufferPoolManager {
 	freeList := make([]FrameID, poolSize)
 	pages := make([]*page.Page, poolSize)

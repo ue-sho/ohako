@@ -2,24 +2,24 @@ package page
 
 import "github.com/ue-sho/ohako/types"
 
-// RID is the record identifier for the given page identifier and slot number
+// 与えられたページ識別子とスロット番号に対応するレコード識別子である
 type RID struct {
 	pageId  types.PageID
 	slotNum uint32
 }
 
-// Set sets the recod identifier
+// RIDのsetter
 func (r *RID) Set(pageId types.PageID, slot uint32) {
 	r.pageId = pageId
 	r.slotNum = slot
 }
 
-// GetPageId gets the page id
+// ページIDのgetter
 func (r *RID) GetPageId() types.PageID {
 	return r.pageId
 }
 
-// GetSlot gets the slot number
+// スロット番号のgetter
 func (r *RID) GetSlot() uint32 {
 	return r.slotNum
 }

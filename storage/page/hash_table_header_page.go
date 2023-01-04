@@ -4,16 +4,18 @@ import "github.com/ue-sho/ohako/types"
 
 /**
  *
- * Header format (size in byte, 16 bytes in total):
- * -------------------------------------------------------------
- * | LSN (4) | Size (4) | PageId(4) | NextBlockIndex(4)
- * -------------------------------------------------------------
+ * ヘッダーフォーマット (size in byte, 16 bytes in total):
+ * -------------------------------------------------------------------------------
+ * | PageId(4) | LSN (4) | NextBlockIndex(4) | Size (4) | BlockPageIds (4) x 1020
+ * -------------------------------------------------------------------------------
+ *
+ * ヘッダー16Byte + BlockPageIds 4*1020Byte = 4096Byte
  */
 type HashTableHeaderPage struct {
 	pageId       types.PageID
 	lsn          int // log sequence number
-	nextIndex    int // the next index to add a new entry to blockPageIds
-	size         int // the number of key/value pairs the hash table can hold
+	nextIndex    int // blockPageIdsに新規追加する次のインデックス。
+	size         int // ハッシュテーブルが保持できるキーと値のペアの数
 	blockPageIds [1020]types.PageID
 }
 

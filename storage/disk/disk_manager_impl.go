@@ -10,7 +10,7 @@ import (
 	"github.com/ue-sho/ohako/types"
 )
 
-//DiskManagerImpl is the disk implementation of DiskManager
+// DiskManagerインターフェースの実装
 type DiskManagerImpl struct {
 	db         *os.File
 	fileName   string
@@ -19,7 +19,7 @@ type DiskManagerImpl struct {
 	size       int64
 }
 
-// NewDiskManagerImpl returns a DiskManager instance
+// DiskManagerImplインスタンスを生成する
 func NewDiskManagerImpl(dbFilename string) DiskManager {
 	file, err := os.OpenFile(dbFilename, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
@@ -44,33 +44,7 @@ func NewDiskManagerImpl(dbFilename string) DiskManager {
 	return &DiskManagerImpl{file, dbFilename, nextPageID, 0, fileSize}
 }
 
-// ShutDown closes of the database file
-func (d *DiskManagerImpl) ShutDown() {
-	d.db.Close()
-}
-
-// Write a page to the database file
-func (d *DiskManagerImpl) WritePage(pageId types.PageID, pageData []byte) error {
-	offset := int64(pageId * page.PageSize)
-	d.db.Seek(offset, io.SeekStart)
-	bytesWritten, err := d.db.Write(pageData)
-	if err != nil {
-		return err
-	}
-
-	if bytesWritten != page.PageSize {
-		return errors.New("bytes written not equals page size")
-	}
-
-	if offset >= d.size {
-		d.size = offset + int64(bytesWritten)
-	}
-
-	d.db.Sync()
-	return nil
-}
-
-// Read a page from the database file
+// データベースファイルからページを読み込む
 func (d *DiskManagerImpl) ReadPage(pageID types.PageID, pageData []byte) error {
 	offset := int64(pageID * page.PageSize)
 
@@ -98,26 +72,51 @@ func (d *DiskManagerImpl) ReadPage(pageID types.PageID, pageData []byte) error {
 	return nil
 }
 
-//  AllocatePage allocates a new page
-//  For now just keep an increasing counter
+// データベースファイルにページデータを書き込む
+func (d *DiskManagerImpl) WritePage(pageId types.PageID, pageData []byte) error {
+	offset := int64(pageId * page.PageSize)
+	d.db.Seek(offset, io.SeekStart)
+	bytesWritten, err := d.db.Write(pageData)
+	if err != nil {
+		return err
+	}
+
+	if bytesWritten != page.PageSize {
+		return errors.New("bytes written not equals page size")
+	}
+
+	if offset >= d.size {
+		d.size = offset + int64(bytesWritten)
+	}
+
+	d.db.Sync()
+	return nil
+}
+
+//  新しいページを割り当てる
+//  実際に行っていることは、ページIDカウンターを増やすだけ
 func (d *DiskManagerImpl) AllocatePage() types.PageID {
 	ret := d.nextPageID
 	d.nextPageID++
 	return ret
 }
 
-// DeallocatePage deallocates page
-// Need bitmap in header page for tracking pages
-// This does not actually need to do anything for now.
+// ページを解放する
+// MEMO: 今のところ何もする必要がない
 func (d *DiskManagerImpl) DeallocatePage(pageID types.PageID) {
 }
 
-// GetNumWrites returns the number of disk writes
+// ディスクの書き込み回数を取得する
 func (d *DiskManagerImpl) GetNumWrites() uint64 {
 	return d.numWrites
 }
 
-// Size returns the size of the file in disk
+// データベースファイルを閉じる
+func (d *DiskManagerImpl) ShutDown() {
+	d.db.Close()
+}
+
+// ディスクファイルのサイズ
 func (d *DiskManagerImpl) Size() int64 {
 	return d.size
 }

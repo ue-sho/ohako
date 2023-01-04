@@ -2,65 +2,67 @@ package page
 
 import "github.com/ue-sho/ohako/types"
 
-// PageSize is the size of a page in disk (4KB)
+// ページサイズ固定(4KB)
+// Linuxで使われているポピュラーなファイルシステムext4のデフォルトのブロックサイズが4096byteであるため
 const PageSize = 4096
 
-// Page represents an abstract page on disk
+// ディスク上の抽象的なページ
 type Page struct {
-	id       types.PageID    // idenfies the page. It is used to find the offset of the page on disk
-	pinCount uint32          // counts how many goroutines are acessing it
-	isDirty  bool            // the page was modified but not flushed
-	data     *[PageSize]byte // bytes stored in disk
+	id       types.PageID    // ページを識別するID。ディスク上のページのオフセットを見つけるために使用される
+	pinCount uint32          // アクセス数 セマフォ的な役割
+	isDirty  bool            // ページが変更されたが、フラッシュされているかどうか
+	data     *[PageSize]byte // ディスクに格納されたデータ
 }
 
-// IncPinCount decrements pin count
+// ピンカウントをインクリメントする
 func (p *Page) IncPinCount() {
 	p.pinCount++
 }
 
-// DecPinCount decrements pin count
+// ピンカウントをデクリメントする
 func (p *Page) DecPinCount() {
 	if p.pinCount > 0 {
 		p.pinCount--
 	}
 }
 
-// PinCount retunds the pin count
+// ピンカウント
 func (p *Page) PinCount() uint32 {
 	return p.pinCount
 }
 
-// ID retunds the page id
+// ページID
 func (p *Page) ID() types.PageID {
 	return p.id
 }
 
-// Data returns the data of the page
+// ページデータ
 func (p *Page) Data() *[PageSize]byte {
 	return p.data
 }
 
-// SetIsDirty sets the isDirty bit
+// isDirtyのsertter
 func (p *Page) SetIsDirty(isDirty bool) {
 	p.isDirty = isDirty
 }
 
-// IsDirty check if the page is dirty
+// isDirty(ページが変更されたが、フラッシュされているかどうか)
 func (p *Page) IsDirty() bool {
 	return p.isDirty
 }
 
-// Copy copies data to the page's data. It is mainly used for testing
+// ページのデータを引数で受けたdataにコピーする
+// 主にテストに使用される
 func (p *Page) Copy(offset uint32, data []byte) {
 	copy(p.data[offset:], data)
 }
 
-// New creates a new page
+// ページを生成する
 func New(id types.PageID, isDirty bool, data *[PageSize]byte) *Page {
 	return &Page{id, uint32(1), isDirty, data}
 }
 
-// New creates a new empty page
+// 空ページを生成する
 func NewEmpty(id types.PageID) *Page {
 	return &Page{id, uint32(1), false, &[PageSize]byte{}}
 }

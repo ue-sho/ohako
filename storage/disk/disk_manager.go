@@ -4,7 +4,6 @@ import (
 	"github.com/ue-sho/ohako/types"
 )
 
-// DiskManager is responsible for interacting with disk
 type DiskManager interface {
 	ReadPage(types.PageID, []byte) error
 	WritePage(types.PageID, []byte) error

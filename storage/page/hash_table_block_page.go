@@ -5,38 +5,36 @@ type HashTablePair struct {
 	value int
 }
 
-const sizeOfHashTablePair = 16
-const BlockArraySize = 4 * 4096 / (4*sizeOfHashTablePair + 1)
+// key(int32 = 4byte) + value(int32 = 4byte)
+const sizeOfHashTablePair = 8
+
+const BlockArraySize = 4 * 4096 / (4*sizeOfHashTablePair + 1) // 496
 
 /**
- * Store indexed key and value together within block page. Supports
- * non-unique keys.
+ * ブロックページ内にインデックスされたキーと値を一緒に格納します。一意でないキーをサポートします。
  *
- * Block page format (keys are stored in order):
+ * ブロックページフォーマット
  *  ----------------------------------------------------------------
  * | KEY(1) + VALUE(1) | KEY(2) + VALUE(2) | ... | KEY(n) + VALUE(n)
  *  ----------------------------------------------------------------
- *
- *  Here '+' means concatenation.
- *
  */
 type HashTableBlockPage struct {
-	occuppied [(BlockArraySize-1)/8 + 1]byte // 256 bits
-	readable  [(BlockArraySize-1)/8 + 1]byte // 256 bits
-	array     [BlockArraySize]HashTablePair  // 252 * 16 bits
+	occuppied [(BlockArraySize-1)/8 + 1]byte // 62 bytes (496 bits)
+	readable  [(BlockArraySize-1)/8 + 1]byte // 62 bytes (496 bits)
+	array     [BlockArraySize]HashTablePair  // 496 * 8 byte
 }
 
-// Gets the key at an index in the block
+// ブロック内のインデックスにあるKeyを取得する
 func (page *HashTableBlockPage) KeyAt(index int) int {
 	return page.array[index].key
 }
 
-// Gets the value at an index in the block
+// ブロック内のインデックスにあるValueを取得する
 func (page *HashTableBlockPage) ValueAt(index int) int {
 	return page.array[index].value
 }
 
-// Attempts to insert a key and value into an index in the block.
+// ブロック内のインデックスにキーと値を挿入する
 func (page *HashTableBlockPage) Insert(index int, key int, value int) bool {
 	if page.IsOccupied(index) {
 		return false
@@ -48,6 +46,7 @@ func (page *HashTableBlockPage) Insert(index int, key int, value int) bool {
 	return true
 }
 
+// ブロック内のインデックスにあるデータを削除する
 func (page *HashTableBlockPage) Remove(index int) {
 	if !page.IsReadable(index) {
 		return
@@ -56,12 +55,12 @@ func (page *HashTableBlockPage) Remove(index int) {
 	page.readable[index/8] &= ^(1 << (index % 8))
 }
 
-// Returns whether or not an index is occuppied (valid key/value pair)
+// インデックスが占有されているか否か判定する
 func (page *HashTableBlockPage) IsOccupied(index int) bool {
 	return (page.occuppied[index/8] & (1 << (index % 8))) != 0
 }
 
-// Returns whether or not an index is readable (valid key/value pair)
+// インデックスが読み取り可能であるか否か判定する
 func (page *HashTableBlockPage) IsReadable(index int) bool {
 	return (page.readable[index/8] & (1 << (index % 8))) != 0
 }
