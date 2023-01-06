@@ -5,22 +5,22 @@ import (
 	"fmt"
 )
 
-type node struct {
-	key   interface{}
-	value interface{}
-	next  *node
-	prev  *node
+type node[T, U any] struct {
+	key   T
+	value U
+	next  *node[T, U]
+	prev  *node[T, U]
 }
 
-type circularList struct {
-	head     *node
-	tail     *node
+type circularList[T comparable, U any] struct {
+	head     *node[T, U]
+	tail     *node[T, U]
 	size     uint32
 	capacity uint32 // 最大サイズ
 }
 
 // headから辿って指定のkeyのnodeを探す
-func (c *circularList) find(key interface{}) *node {
+func (c *circularList[T, U]) find(key T) *node[T, U] {
 	ptr := c.head
 	for i := uint32(0); i < c.size; i++ {
 		if ptr.key == key {
@@ -32,17 +32,17 @@ func (c *circularList) find(key interface{}) *node {
 }
 
 // keyを持っているか否か
-func (c *circularList) hasKey(key interface{}) bool {
+func (c *circularList[T, U]) hasKey(key T) bool {
 	return c.find(key) != nil
 }
 
 // nodeを挿入する
-func (c *circularList) insert(key interface{}, value interface{}) error {
-	if c.size == c.capacity {
+func (c *circularList[T, U]) insert(key T, value U) error {
+	if c.isFull() {
 		return errors.New("capacity is full")
 	}
 
-	newNode := &node{key, value, nil, nil}
+	newNode := &node[T, U]{key, value, nil, nil}
 	if c.size == 0 {
 		newNode.next = newNode
 		newNode.prev = newNode
@@ -77,7 +77,7 @@ func (c *circularList) insert(key interface{}, value interface{}) error {
 }
 
 // keyのnodeを削除する
-func (c *circularList) remove(key interface{}) {
+func (c *circularList[T, U]) remove(key T) {
 	node := c.find(key)
 	if node == nil {
 		return
@@ -104,11 +104,12 @@ func (c *circularList) remove(key interface{}) {
 	c.size--
 }
 
-func (c *circularList) isFull() bool {
+func (c *circularList[T, U]) isFull() bool {
 	return c.size == c.capacity
 }
 
-func (c *circularList) print() {
+// debug用
+func (c *circularList[T, U]) print() {
 	if c.size == 0 {
 		fmt.Println(nil)
 	}
@@ -119,6 +120,6 @@ func (c *circularList) print() {
 	}
 }
 
-func newCircularList(maxSize uint32) *circularList {
-	return &circularList{nil, nil, 0, maxSize}
+func newCircularList[T, U comparable](maxSize uint32) *circularList[T, U] {
+	return &circularList[T, U]{nil, nil, 0, maxSize}
 }

@@ -2,11 +2,11 @@ package buffer
 
 type FrameID uint32
 
-// クロック置換(ページ置換)アルゴリズム
-// Least Recently Used(最後に使われてからの経過時間が最も長い: LRU)を採用
+// Clock-Sweepアルゴリズム
+// Least Recently Used(最後に使われてからの経過時間が最も長い: LRU)の近似アルゴリズム
 type ClockReplacer struct {
-	cList     *circularList // 使わなくなったnodeを入れる円環リスト
-	clockHand **node        // 先頭nodeのポインタ
+	cList     *circularList[FrameID, uint32] // 使わなくなったnodeを入れる円環リスト
+	clockHand **node[FrameID, uint32]        // 先頭nodeのポインタ
 }
 
 // LRUアルゴリズムを元にVictimフレームを取得する(リストからは削除する)
@@ -18,11 +18,11 @@ func (c *ClockReplacer) Victim() *FrameID {
 	var victimFrameID *FrameID
 	currentNode := (*c.clockHand)
 	for {
-		if currentNode.value.(bool) {
-			currentNode.value = false
+		if currentNode.value > 0 {
+			currentNode.value -= 1
 			c.clockHand = &currentNode.next
 		} else {
-			frameID := currentNode.key.(FrameID)
+			frameID := currentNode.key
 			victimFrameID = &frameID
 
 			c.clockHand = &currentNode.next
@@ -37,7 +37,7 @@ func (c *ClockReplacer) Victim() *FrameID {
 // フレームを使用しなくなったのでリストに追加する
 func (c *ClockReplacer) Unpin(id FrameID) {
 	if !c.cList.hasKey(id) {
-		c.cList.insert(id, true)
+		c.cList.insert(id, 1)
 		if c.cList.size == 1 {
 			c.clockHand = &c.cList.head
 		}
@@ -56,7 +56,6 @@ func (c *ClockReplacer) Pin(id FrameID) {
 		c.clockHand = &(*c.clockHand).next
 	}
 	c.cList.remove(id)
-
 }
 
 // サイズ
@@ -66,6 +65,6 @@ func (c *ClockReplacer) Size() uint32 {
 
 // ClockReplacerを生成する
 func NewClockReplacer(poolSize uint32) *ClockReplacer {
-	cList := newCircularList(poolSize)
+	cList := newCircularList[FrameID, uint32](poolSize)
 	return &ClockReplacer{cList, &cList.head}
 }
