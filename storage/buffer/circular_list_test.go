@@ -80,7 +80,6 @@ func TestPrint(t *testing.T) {
 	cl.insert("key5", "value3")
 
 	// when
-	cl.print()
 	size := cl.size
 
 	// then: maxSize=2なので2つinsertしたらFullになる

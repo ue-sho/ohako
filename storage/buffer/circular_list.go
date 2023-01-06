@@ -2,7 +2,6 @@ package buffer
 
 import (
 	"errors"
-	"fmt"
 )
 
 type node[T, U any] struct {
@@ -63,11 +62,6 @@ func (c *circularList[T, U]) insert(key T, value U) error {
 	newNode.prev = c.tail
 
 	c.tail.next = newNode
-	if c.head == c.tail {
-		// MEMO: 上記行と同じことをしているので、意味なさそう？
-		c.head.next = newNode
-	}
-
 	c.tail = newNode
 	c.head.prev = c.tail
 
@@ -106,18 +100,6 @@ func (c *circularList[T, U]) remove(key T) {
 
 func (c *circularList[T, U]) isFull() bool {
 	return c.size == c.capacity
-}
-
-// debug用
-func (c *circularList[T, U]) print() {
-	if c.size == 0 {
-		fmt.Println(nil)
-	}
-	ptr := c.head
-	for i := uint32(0); i < c.size; i++ {
-		fmt.Println(ptr.key, ptr.value, ptr.prev.key, ptr.next.key)
-		ptr = ptr.next
-	}
 }
 
 func newCircularList[T, U comparable](maxSize uint32) *circularList[T, U] {
