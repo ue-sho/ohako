@@ -8,20 +8,20 @@ import (
 
 func TestInsert_hasKey(t *testing.T) {
 	// given
-	cl := newCircularList(10)
+	cl := newCircularList[int, string](10)
 
 	// when: 数値も文字列も挿入できる
-	cl.insert(1, 1)
-	cl.insert("key", "value")
+	cl.insert(1, "value1")
+	cl.insert(2, "value2")
 
 	// then
 	testingpkg.Equals(t, true, cl.hasKey(1))
-	testingpkg.Equals(t, true, cl.hasKey("key"))
+	testingpkg.Equals(t, true, cl.hasKey(2))
 }
 
 func TestInsertRemove(t *testing.T) {
 	// given
-	cl := newCircularList(10)
+	cl := newCircularList[string, string](10)
 
 	// when
 	cl.insert("key1", "value1")
@@ -40,7 +40,7 @@ func TestInsertRemove(t *testing.T) {
 
 func TestIsFull(t *testing.T) {
 	// given
-	cl := newCircularList(2)
+	cl := newCircularList[int, int](2)
 	cl.insert(1, 1)
 	cl.insert(2, 2)
 
@@ -58,7 +58,7 @@ func TestIsFull(t *testing.T) {
 
 func TestFind(t *testing.T) {
 	// given
-	cl := newCircularList(10)
+	cl := newCircularList[int, int](10)
 	cl.insert(1, 10)
 	cl.insert(2, 20)
 
@@ -72,7 +72,7 @@ func TestFind(t *testing.T) {
 
 func TestPrint(t *testing.T) {
 	// given
-	cl := newCircularList(10)
+	cl := newCircularList[string, string](10)
 	cl.insert("key1", "value1")
 	cl.insert("key2", "value2")
 	cl.insert("key3", "value3")
