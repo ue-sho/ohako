@@ -7,7 +7,6 @@ import (
 	"github.com/ue-sho/ohako/storage/disk"
 	"github.com/ue-sho/ohako/storage/page"
 	testingpkg "github.com/ue-sho/ohako/testing"
-	"github.com/ue-sho/ohako/types"
 )
 
 func TestBinaryData(t *testing.T) {
@@ -19,7 +18,7 @@ func TestBinaryData(t *testing.T) {
 
 	// シナリオ: バッファプールは空。最初のページはpageID=0が作成される
 	page0 := bpm.NewPage()
-	testingpkg.Equals(t, types.PageID(0), page0.ID())
+	testingpkg.Equals(t, page.PageID(0), page0.ID())
 
 	// ランダムなバイナリーデータを作る
 	randomBinaryData := make([]byte, page.PageSize)
@@ -39,7 +38,7 @@ func TestBinaryData(t *testing.T) {
 	// シナリオ: バッファプールが一杯になるまで、新しいページを作ることができる
 	for i := uint32(1); i < poolSize; i++ {
 		p := bpm.NewPage()
-		testingpkg.Equals(t, types.PageID(i), p.ID())
+		testingpkg.Equals(t, page.PageID(i), p.ID())
 	}
 
 	// シナリオ: バッファプールが一杯になったら、新しいページを作ることはできない
@@ -49,8 +48,8 @@ func TestBinaryData(t *testing.T) {
 
 	// シナリオ: ページ{0, 1, 2, 3, 4}のピンを解除し、ディスクへ書き込む
 	for i := 0; i < 5; i++ {
-		testingpkg.Ok(t, bpm.UnpinPage(types.PageID(i), true))
-		bpm.FlushPage(types.PageID(i))
+		testingpkg.Ok(t, bpm.UnpinPage(page.PageID(i), true))
+		bpm.FlushPage(page.PageID(i))
 	}
 	// 4つUnpinPageしたので、新規ページが作成できる
 	for i := 0; i < 4; i++ {
@@ -60,9 +59,9 @@ func TestBinaryData(t *testing.T) {
 	}
 
 	// シナリオ: 先ほど書いたデータを取り出せる
-	page0 = bpm.FetchPage(types.PageID(0))
+	page0 = bpm.FetchPage(page.PageID(0))
 	testingpkg.Equals(t, fixedRandomBinaryData, *page0.Data())
-	testingpkg.Ok(t, bpm.UnpinPage(types.PageID(0), true))
+	testingpkg.Ok(t, bpm.UnpinPage(page.PageID(0), true))
 }
 
 func TestSample(t *testing.T) {
@@ -74,7 +73,7 @@ func TestSample(t *testing.T) {
 
 	// シナリオ: バッファプールは空。最初のページはpageID=0が作成される
 	page0 := bpm.NewPage()
-	testingpkg.Equals(t, types.PageID(0), page0.ID())
+	testingpkg.Equals(t, page.PageID(0), page0.ID())
 
 	// シナリオ: ページができれば、コンテンツの読み書きができる
 	page0.Copy(0, []byte("Hello"))
@@ -83,7 +82,7 @@ func TestSample(t *testing.T) {
 	// シナリオ: バッファプールが一杯になるまで、新しいページを作ることができる
 	for i := uint32(1); i < poolSize; i++ {
 		p := bpm.NewPage()
-		testingpkg.Equals(t, types.PageID(i), p.ID())
+		testingpkg.Equals(t, page.PageID(i), p.ID())
 	}
 
 	// シナリオ: バッファプールが一杯になったら、新しいページを作ることはできない
@@ -93,21 +92,21 @@ func TestSample(t *testing.T) {
 
 	// シナリオ: ページ{0, 1, 2, 3, 4}のピンを解除する
 	for i := 0; i < 5; i++ {
-		testingpkg.Ok(t, bpm.UnpinPage(types.PageID(i), true))
-		bpm.FlushPage(types.PageID(i))
+		testingpkg.Ok(t, bpm.UnpinPage(page.PageID(i), true))
+		bpm.FlushPage(page.PageID(i))
 	}
 	// さらに4つの新しいページ作成. キャッシュフレームがまだ1つ残っている状態
 	for i := 0; i < 4; i++ {
 		bpm.NewPage()
 	}
 	// シナリオ: 先ほど書いたデータを取り出せる
-	page0 = bpm.FetchPage(types.PageID(0))
+	page0 = bpm.FetchPage(page.PageID(0))
 	testingpkg.Equals(t, [page.PageSize]byte{'H', 'e', 'l', 'l', 'o'}, *page0.Data())
 
 	// シナリオ: ページ0のピンを解除し、新しいページを2つ作成すると、バッファのすべてのページが固定されページ0の取得は失敗する
-	testingpkg.Ok(t, bpm.UnpinPage(types.PageID(0), true))
+	testingpkg.Ok(t, bpm.UnpinPage(page.PageID(0), true))
 
-	testingpkg.Equals(t, types.PageID(14), bpm.NewPage().ID())
+	testingpkg.Equals(t, page.PageID(14), bpm.NewPage().ID())
 	testingpkg.Equals(t, (*page.Page)(nil), bpm.NewPage())
-	testingpkg.Equals(t, (*page.Page)(nil), bpm.FetchPage(types.PageID(0)))
+	testingpkg.Equals(t, (*page.Page)(nil), bpm.FetchPage(page.PageID(0)))
 }

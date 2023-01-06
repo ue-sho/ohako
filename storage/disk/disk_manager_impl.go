@@ -7,14 +7,13 @@ import (
 	"os"
 
 	"github.com/ue-sho/ohako/storage/page"
-	"github.com/ue-sho/ohako/types"
 )
 
 // DiskManagerインターフェースの実装
 type DiskManagerImpl struct {
 	db         *os.File
 	fileName   string
-	nextPageID types.PageID
+	nextPageID page.PageID
 	numWrites  uint64
 	size       int64
 }
@@ -36,16 +35,16 @@ func NewDiskManagerImpl(dbFilename string) DiskManager {
 	fileSize := fileInfo.Size()
 	nPages := fileSize / page.PageSize
 
-	nextPageID := types.PageID(0)
+	nextPageID := page.PageID(0)
 	if nPages > 0 {
-		nextPageID = types.PageID(int32(nPages + 1))
+		nextPageID = page.PageID(int32(nPages + 1))
 	}
 
 	return &DiskManagerImpl{file, dbFilename, nextPageID, 0, fileSize}
 }
 
 // データベースファイルからページを読み込む
-func (d *DiskManagerImpl) ReadPage(pageID types.PageID, pageData []byte) error {
+func (d *DiskManagerImpl) ReadPage(pageID page.PageID, pageData []byte) error {
 	offset := int64(pageID * page.PageSize)
 
 	fileInfo, err := d.db.Stat()
@@ -73,7 +72,7 @@ func (d *DiskManagerImpl) ReadPage(pageID types.PageID, pageData []byte) error {
 }
 
 // データベースファイルにページデータを書き込む
-func (d *DiskManagerImpl) WritePage(pageId types.PageID, pageData []byte) error {
+func (d *DiskManagerImpl) WritePage(pageId page.PageID, pageData []byte) error {
 	offset := int64(pageId * page.PageSize)
 	d.db.Seek(offset, io.SeekStart)
 	bytesWritten, err := d.db.Write(pageData)
@@ -95,7 +94,7 @@ func (d *DiskManagerImpl) WritePage(pageId types.PageID, pageData []byte) error 
 
 //  新しいページを割り当てる
 //  実際に行っていることは、ページIDカウンターを増やすだけ
-func (d *DiskManagerImpl) AllocatePage() types.PageID {
+func (d *DiskManagerImpl) AllocatePage() page.PageID {
 	ret := d.nextPageID
 	d.nextPageID++
 	return ret
@@ -103,7 +102,7 @@ func (d *DiskManagerImpl) AllocatePage() types.PageID {
 
 // ページを解放する
 // MEMO: 今のところ何もする必要がない
-func (d *DiskManagerImpl) DeallocatePage(pageID types.PageID) {
+func (d *DiskManagerImpl) DeallocatePage(pageID page.PageID) {
 }
 
 // ディスクの書き込み回数を取得する

@@ -1,14 +1,12 @@
 package disk
 
-import (
-	"github.com/ue-sho/ohako/types"
-)
+import "github.com/ue-sho/ohako/storage/page"
 
 type DiskManager interface {
-	ReadPage(types.PageID, []byte) error
-	WritePage(types.PageID, []byte) error
-	AllocatePage() types.PageID
-	DeallocatePage(types.PageID)
+	ReadPage(page.PageID, []byte) error
+	WritePage(page.PageID, []byte) error
+	AllocatePage() page.PageID
+	DeallocatePage(page.PageID)
 	GetNumWrites() uint64
 	ShutDown()
 	Size() int64

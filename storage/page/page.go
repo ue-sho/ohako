@@ -1,14 +1,12 @@
 package page
 
-import "github.com/ue-sho/ohako/types"
-
 // ページサイズ固定(4KB)
 // Linuxで使われているポピュラーなファイルシステムext4のデフォルトのブロックサイズが4096byteであるため
 const PageSize = 4096
 
 // ディスク上の抽象的なページ
 type Page struct {
-	id       types.PageID    // ページを識別するID。ディスク上のページのオフセットを見つけるために使用される
+	id       PageID          // ページを識別するID。ディスク上のページのオフセットを見つけるために使用される
 	pinCount uint32          // アクセス数 セマフォ的な役割
 	isDirty  bool            // ページが変更されたが、フラッシュされているかどうか
 	data     *[PageSize]byte // ディスクに格納されたデータ
@@ -32,7 +30,7 @@ func (p *Page) PinCount() uint32 {
 }
 
 // ページID
-func (p *Page) ID() types.PageID {
+func (p *Page) ID() PageID {
 	return p.id
 }
 
@@ -58,11 +56,11 @@ func (p *Page) Copy(offset uint32, data []byte) {
 }
 
 // ページを生成する
-func New(id types.PageID, isDirty bool, data *[PageSize]byte) *Page {
+func New(id PageID, isDirty bool, data *([PageSize]byte)) *Page {
 	return &Page{id, uint32(1), isDirty, data}
 }
 
 // 空ページを生成する
-func NewEmpty(id types.PageID) *Page {
+func NewEmpty(id PageID) *Page {
 	return &Page{id, uint32(1), false, &[PageSize]byte{}}
 }
