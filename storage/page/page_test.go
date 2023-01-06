@@ -4,20 +4,19 @@ import (
 	"testing"
 
 	testingpkg "github.com/ue-sho/ohako/testing"
-	"github.com/ue-sho/ohako/types"
 )
 
 func TestNewPage(t *testing.T) {
 	// when
-	p := New(types.PageID(0), false, &[PageSize]byte{})
+	p := New(PageID(0), false, &[PageSize]byte{})
 
 	// then
-	testingpkg.Equals(t, types.PageID(0), p.ID())
+	testingpkg.Equals(t, PageID(0), p.ID())
 	testingpkg.Equals(t, uint32(1), p.PinCount())
 }
 func TestPinCount(t *testing.T) {
 	// given
-	p := New(types.PageID(0), false, &[PageSize]byte{})
+	p := New(PageID(0), false, &[PageSize]byte{})
 	initPinCount := p.PinCount()
 
 	// when
@@ -36,7 +35,7 @@ func TestPinCount(t *testing.T) {
 
 func TestIsDirty(t *testing.T) {
 	// given
-	p := New(types.PageID(0), false, &[PageSize]byte{})
+	p := New(PageID(0), false, &[PageSize]byte{})
 
 	// when
 	p.SetIsDirty(true)
@@ -47,7 +46,7 @@ func TestIsDirty(t *testing.T) {
 
 func TestPageCopy(t *testing.T) {
 	// given
-	p := New(types.PageID(0), false, &[PageSize]byte{})
+	p := New(PageID(0), false, &[PageSize]byte{})
 
 	// when
 	p.Copy(0, []byte{'H', 'E', 'L', 'L', 'O'})
@@ -58,10 +57,10 @@ func TestPageCopy(t *testing.T) {
 
 func TestEmptyPage(t *testing.T) {
 	// when
-	p := NewEmpty(types.PageID(0))
+	p := NewEmpty(PageID(0))
 
 	// then: 空のページが生成される
-	testingpkg.Equals(t, types.PageID(0), p.ID())
+	testingpkg.Equals(t, PageID(0), p.ID())
 	testingpkg.Equals(t, uint32(1), p.PinCount())
 	testingpkg.Equals(t, false, p.IsDirty())
 	testingpkg.Equals(t, [PageSize]byte{}, *p.Data())

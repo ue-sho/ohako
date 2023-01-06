@@ -5,7 +5,6 @@ import (
 
 	"github.com/ue-sho/ohako/storage/disk"
 	"github.com/ue-sho/ohako/storage/page"
-	"github.com/ue-sho/ohako/types"
 )
 
 type BufferPoolManager struct {
@@ -13,11 +12,11 @@ type BufferPoolManager struct {
 	pages       []*page.Page
 	replacer    *ClockReplacer
 	freeList    []FrameID
-	pageTable   map[types.PageID]FrameID
+	pageTable   map[page.PageID]FrameID
 }
 
 // バッファプールから要求されたページを取り出す
-func (b *BufferPoolManager) FetchPage(pageID types.PageID) *page.Page {
+func (b *BufferPoolManager) FetchPage(pageID page.PageID) *page.Page {
 	if frameID, ok := b.pageTable[pageID]; ok {
 		pg := b.pages[frameID]
 		pg.IncPinCount()
@@ -60,7 +59,7 @@ func (b *BufferPoolManager) FetchPage(pageID types.PageID) *page.Page {
 
 // バッファプールからターゲットページのピンを外す
 // ページを使用しなくなった場合に使用する
-func (b *BufferPoolManager) UnpinPage(pageID types.PageID, isDirty bool) error {
+func (b *BufferPoolManager) UnpinPage(pageID page.PageID, isDirty bool) error {
 	if frameID, ok := b.pageTable[pageID]; ok {
 		pg := b.pages[frameID]
 		pg.DecPinCount()
@@ -82,7 +81,7 @@ func (b *BufferPoolManager) UnpinPage(pageID types.PageID, isDirty bool) error {
 }
 
 // ターゲットページをフラッシュする(ディスクへ書き込む)
-func (b *BufferPoolManager) FlushPage(pageID types.PageID) bool {
+func (b *BufferPoolManager) FlushPage(pageID page.PageID) bool {
 	if frameID, ok := b.pageTable[pageID]; ok {
 		pg := b.pages[frameID]
 		pg.DecPinCount()
@@ -129,7 +128,7 @@ func (b *BufferPoolManager) NewPage() *page.Page {
 }
 
 // バッファプールからページを削除する
-func (b *BufferPoolManager) DeletePage(pageID types.PageID) error {
+func (b *BufferPoolManager) DeletePage(pageID page.PageID) error {
 	var frameID FrameID
 	var ok bool
 	if frameID, ok = b.pageTable[pageID]; !ok {
@@ -179,5 +178,5 @@ func NewBufferPoolManager(poolSize uint32, DiskManager disk.DiskManager) *Buffer
 	}
 
 	replacer := NewClockReplacer(poolSize)
-	return &BufferPoolManager{DiskManager, pages, replacer, freeList, make(map[types.PageID]FrameID)}
+	return &BufferPoolManager{DiskManager, pages, replacer, freeList, make(map[page.PageID]FrameID)}
 }
