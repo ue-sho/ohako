@@ -1,6 +1,10 @@
 package index
 
-type NodeType uint8
+import (
+	"unsafe"
+)
+
+type NodeType int
 
 const (
 	NodeTypeUnknown NodeType = iota
@@ -9,26 +13,27 @@ const (
 	NodeTypeLeaf
 )
 
-type Node struct {
+type NodeHeader struct {
 	nodeType NodeType
-	body     []byte
+}
+
+type Node struct {
+	header *NodeHeader
+	body   []byte
 }
 
 func NewNode(data []byte) *Node {
-	return &Node{
-		nodeType: NodeTypeUnknown,
-		body:     data,
+	node := Node{}
+	headerSize := int(unsafe.Sizeof(*node.header))
+	if headerSize+1 > len(data) {
+		panic("Node header must be aligned")
 	}
-}
 
-func (n *Node) IsNodeTypeLeaf() bool {
-	return n.nodeType == NodeTypeLeaf
-}
-
-func (n *Node) IsNodeTypeInternal() bool {
-	return n.nodeType == NodeTypeInternal
+	node.header = (*NodeHeader)(unsafe.Pointer(&data[0]))
+	node.body = data[headerSize:]
+	return &node
 }
 
 func (n *Node) SetNodeType(nodeType NodeType) {
-	n.nodeType = nodeType
+	n.header.nodeType = nodeType
 }
