@@ -2,8 +2,6 @@ package index
 
 import (
 	"bytes"
-	"encoding/binary"
-	"fmt"
 	"unsafe"
 
 	"github.com/ue-sho/ohako/storage/page"
@@ -19,6 +17,7 @@ type InternalNode struct {
 	body   *Slotted
 }
 
+// InternalNodeを作成する
 func NewInternalNode(bytes []byte) *InternalNode {
 	internalNode := InternalNode{}
 	headerSize := int(unsafe.Sizeof(*internalNode.header))
@@ -37,6 +36,7 @@ func (b *InternalNode) NumPairs() int {
 }
 
 // 指定keyを持ったslotIdを探す
+// 見つからなかった場合、挿入されるべき場所のslotIdを返す
 func (b *InternalNode) SearchSlotId(key []byte) (int, bool) {
 	return BinarySearchBy(b.NumPairs(), func(slotId int) int {
 		return bytes.Compare(b.PairAt(slotId).Key, key)
@@ -52,7 +52,6 @@ func (b *InternalNode) SearchChild(key []byte) page.PageID {
 // 指定keyから子NodeのSlotIdを探す
 func (b *InternalNode) SearchChildIdx(key []byte) int {
 	slotId, result := b.SearchSlotId(key)
-	fmt.Println("SearchChildIdx key=", binary.BigEndian.Uint64(key), " slotId=", slotId, " result=", result)
 	if result {
 		return slotId + 1
 	} else {
