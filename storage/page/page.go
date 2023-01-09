@@ -56,7 +56,7 @@ func (p *Page) Copy(offset uint32, data []byte) {
 }
 
 // ページを生成する
-func New(id PageID, isDirty bool, data *([PageSize]byte)) *Page {
+func New(id PageID, isDirty bool, data *[PageSize]byte) *Page {
 	return &Page{id, uint32(1), isDirty, data}
 }
 
