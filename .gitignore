@@ -1,3 +1,6 @@
+# vscode
+.vscode/
+
 # DB log file
 data.log
 
