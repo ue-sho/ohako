@@ -2,6 +2,7 @@ package buffer
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/ue-sho/ohako/storage/disk"
 	"github.com/ue-sho/ohako/storage/page"
@@ -18,6 +19,7 @@ type BufferPoolManager struct {
 // バッファプールから要求されたページを取り出す
 func (b *BufferPoolManager) FetchPage(pageID page.PageID) *page.Page {
 	if frameID, ok := b.pageTable[pageID]; ok {
+		fmt.Println("uesho frameID1:  ", int(frameID))
 		pg := b.pages[frameID]
 		pg.IncPinCount()
 		(*b.replacer).Pin(frameID)
@@ -29,8 +31,10 @@ func (b *BufferPoolManager) FetchPage(pageID page.PageID) *page.Page {
 		// バッファプールが全て使用中なのでnil
 		return nil
 	}
+	fmt.Println("uesho frameID2:  ", int(*frameID))
 
 	if !isFromFreeList {
+		fmt.Println("uesho isFromFreeList*********:  ")
 		// 現在のフレームからページを削除する
 		currentPage := b.pages[*frameID]
 		if currentPage != nil {
@@ -45,7 +49,9 @@ func (b *BufferPoolManager) FetchPage(pageID page.PageID) *page.Page {
 
 	data := make([]byte, page.PageSize)
 	err := b.diskManager.ReadPage(pageID, data)
+	fmt.Println("uesho b.diskManager.ReadPage finish*********:  ")
 	if err != nil {
+		fmt.Println("nil !?!>!??! ", err)
 		return nil
 	}
 	var pageData [page.PageSize]byte
@@ -53,6 +59,7 @@ func (b *BufferPoolManager) FetchPage(pageID page.PageID) *page.Page {
 	pg := page.New(pageID, false, &pageData)
 	b.pageTable[pageID] = *frameID
 	b.pages[*frameID] = pg
+	fmt.Println("uesho page.New finish*********:  ")
 
 	return pg
 }

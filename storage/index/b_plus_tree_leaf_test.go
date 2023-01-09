@@ -1,7 +1,6 @@
 package index
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/ue-sho/ohako/storage/page"
@@ -138,10 +137,6 @@ func TestLeafNodeSplitInsert(t *testing.T) {
 		testingpkg.Equals(t, tt.key, pair.Key)
 		testingpkg.Equals(t, tt.value, pair.Value)
 	}
-	for i := 0; i < leafPage.NumPairs(); i++ {
-		pair := leafPage.PairAt(i)
-		fmt.Println(string(pair.Key), " : ", string(pair.Value))
-	}
 
 	newNodetests := []struct {
 		key   []byte
@@ -154,10 +149,6 @@ func TestLeafNodeSplitInsert(t *testing.T) {
 		pair := newLeafPage.PairAt(idx)
 		testingpkg.Equals(t, tt.key, pair.Key)
 		testingpkg.Equals(t, tt.value, pair.Value)
-	}
-	for i := 0; i < newLeafPage.NumPairs(); i++ {
-		pair := newLeafPage.PairAt(i)
-		fmt.Println(string(pair.Key), " : ", string(pair.Value))
 	}
 }
 
