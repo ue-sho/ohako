@@ -6,18 +6,22 @@ import (
 	"github.com/ue-sho/ohako/storage/page"
 )
 
+const uint64BinaryLen = 8
+
 type MetaHeader struct {
 	rootPageId page.PageID
 }
 
-type Meta struct {
+type MetaData struct {
 	header        *MetaHeader
 	appAreaLength *uint64
 	appArea       []byte
 }
 
-func NewMeta(bytes []byte) *Meta {
-	meta := Meta{}
+// メタ情報を入れる容器を生成する
+func NewMeta(bytes []byte) *MetaData {
+	meta := MetaData{}
+
 	headerSize := int(unsafe.Sizeof(*meta.header))
 	if headerSize+1 > len(bytes) {
 		panic("meta header must be aligned")
@@ -25,6 +29,6 @@ func NewMeta(bytes []byte) *Meta {
 
 	meta.header = (*MetaHeader)(unsafe.Pointer(&bytes[0]))
 	meta.appAreaLength = (*uint64)(unsafe.Pointer(&bytes[headerSize]))
-	meta.appArea = bytes[headerSize+8:]
+	meta.appArea = bytes[headerSize+uint64BinaryLen:]
 	return &meta
 }

@@ -6,60 +6,30 @@ import (
 	"golang.org/x/xerrors"
 )
 
-type SearchMode interface {
-	childPageId(internalNode *InternalNode) page.PageID
-	tupleSlotId(leaf *LeafNode) (int, bool)
-}
-
-type SearchModeStart struct {
-}
-
-func (s *SearchModeStart) childPageId(internalNode *InternalNode) page.PageID {
-	return internalNode.ChildAt(0)
-}
-
-func (s *SearchModeStart) tupleSlotId(leaf *LeafNode) (int, bool) {
-	return 0, false
-}
-
-type SearchModeKey struct {
-	Key []byte
-}
-
-func (s *SearchModeKey) childPageId(internalNode *InternalNode) page.PageID {
-	return internalNode.SearchChild(s.Key)
-}
-
-func (s *SearchModeKey) tupleSlotId(leaf *LeafNode) (int, bool) {
-	return leaf.SearchSlotId(s.Key)
-}
-
 type BPlusTree struct {
-	MetaPageId page.PageID
+	metaPageId page.PageID // メタ情報が書くのされたページのID
 }
 
+// BPlusTreeインスタンスを生成する
 func CreateBPlusTree(bufmgr *buffer.BufferPoolManager) (*BPlusTree, error) {
-	metaBuffer := bufmgr.NewPage()
-	defer bufmgr.UnpinPage(metaBuffer.ID(), false)
-	meta := NewMeta(metaBuffer.Data()[:])
+	metaPage := bufmgr.NewPage()
+	defer bufmgr.UnpinPage(metaPage.ID(), false)
+	meta := NewMeta(metaPage.Data()[:])
 
-	rootBuffer := bufmgr.NewPage()
-	defer bufmgr.UnpinPage(rootBuffer.ID(), false)
+	rootPage := bufmgr.NewPage()
+	defer bufmgr.UnpinPage(rootPage.ID(), false)
 
-	root := NewNode(rootBuffer.Data()[:])
+	root := NewNode(rootPage.Data()[:])
 	root.SetNodeType(NodeTypeLeaf)
 
 	leaf := NewLeafNode(root.body)
 	leaf.Initialize()
 
-	meta.header.rootPageId = rootBuffer.ID()
-	return NewBPlusTree(metaBuffer.ID()), nil
+	meta.header.rootPageId = rootPage.ID()
+	return &BPlusTree{metaPage.ID()}, nil
 }
 
-func NewBPlusTree(metaPageId page.PageID) *BPlusTree {
-	return &BPlusTree{metaPageId}
-}
-
+// メタデータからアプリケーションで使う保存領域を読み出す
 func (t *BPlusTree) ReadMetaAppArea(bufmgr *buffer.BufferPoolManager) ([]byte, error) {
 	metaBuffer := t.fetchMetaPage(bufmgr)
 	defer bufmgr.UnpinPage(metaBuffer.ID(), false)
@@ -70,6 +40,7 @@ func (t *BPlusTree) ReadMetaAppArea(bufmgr *buffer.BufferPoolManager) ([]byte, e
 	return data, nil
 }
 
+// メタデータのアプリケーションを使う保存領域に書き込む
 func (t *BPlusTree) WriteMetaAppArea(bufmgr *buffer.BufferPoolManager, data []byte) error {
 	metaBuffer := t.fetchMetaPage(bufmgr)
 	defer bufmgr.UnpinPage(metaBuffer.ID(), true)
@@ -83,13 +54,15 @@ func (t *BPlusTree) WriteMetaAppArea(bufmgr *buffer.BufferPoolManager, data []by
 	return nil
 }
 
+// メタページを取得する
 func (t *BPlusTree) fetchMetaPage(bufmgr *buffer.BufferPoolManager) *page.Page {
-	metaBuffer := bufmgr.FetchPage(t.MetaPageId)
+	metaBuffer := bufmgr.FetchPage(t.metaPageId)
 	return metaBuffer
 }
 
+// ルートページを取得する
 func (t *BPlusTree) fetchRootPage(bufmgr *buffer.BufferPoolManager) (*page.Page, error) {
-	metaBuffer := bufmgr.FetchPage(t.MetaPageId)
+	metaBuffer := bufmgr.FetchPage(t.metaPageId)
 	defer bufmgr.UnpinPage(metaBuffer.ID(), false)
 
 	meta := NewMeta(metaBuffer.Data()[:])
@@ -98,35 +71,38 @@ func (t *BPlusTree) fetchRootPage(bufmgr *buffer.BufferPoolManager) (*page.Page,
 	return rootBuffer, nil
 }
 
-func (t *BPlusTree) searchInternal(bufmgr *buffer.BufferPoolManager, nodeBuffer *page.Page, searchMode SearchMode) (*BPlusTreeIter, error) {
-	node := NewNode(nodeBuffer.Data()[:])
+// 引数page(Node)からsearchModeで指定されたデータ見つかるまで再帰で探す
+func (t *BPlusTree) searchNode(bufmgr *buffer.BufferPoolManager, page *page.Page, searchMode SearchMode) (*BPlusTreeIter, error) {
+	node := NewNode(page.Data()[:])
 	switch node.header.nodeType {
 	case NodeTypeLeaf:
 		leaf := NewLeafNode(node.body)
 		slotId, _ := searchMode.tupleSlotId(leaf)
 		node = nil
-		return &BPlusTreeIter{nodeBuffer, slotId}, nil
+		return &BPlusTreeIter{page, slotId}, nil
 	case NodeTypeInternal:
 		internalNode := NewInternalNode(node.body)
 		childPageId := searchMode.childPageId(internalNode)
 		node = nil
-		bufmgr.UnpinPage(nodeBuffer.ID(), false)
+		bufmgr.UnpinPage(page.ID(), false)
 		childNodePage := bufmgr.FetchPage(childPageId)
-		return t.searchInternal(bufmgr, childNodePage, searchMode)
+		return t.searchNode(bufmgr, childNodePage, searchMode)
 	default:
 		panic("unreachable")
 	}
 }
 
+// B+TreeからsearchModeで指定されたデータを探す
 func (t *BPlusTree) Search(bufmgr *buffer.BufferPoolManager, searchMode SearchMode) (*BPlusTreeIter, error) {
 	rootPage, err := t.fetchRootPage(bufmgr)
 	if err != nil {
 		return nil, err
 	}
-	return t.searchInternal(bufmgr, rootPage, searchMode)
+	return t.searchNode(bufmgr, rootPage, searchMode)
 }
 
-func (t *BPlusTree) insertInternal(bufmgr *buffer.BufferPoolManager, buffer *page.Page, key []byte, value []byte) (bool, []byte, page.PageID, error) {
+// 各NodeでのB+treeの挿入
+func (t *BPlusTree) insertNode(bufmgr *buffer.BufferPoolManager, buffer *page.Page, key []byte, value []byte) (bool, []byte, page.PageID, error) {
 	node := NewNode(buffer.Data()[:])
 	switch node.header.nodeType {
 	case NodeTypeLeaf:
@@ -135,12 +111,13 @@ func (t *BPlusTree) insertInternal(bufmgr *buffer.BufferPoolManager, buffer *pag
 		if result {
 			return false, nil, page.InvalidPageID, xerrors.New("duplicate key")
 		}
+
 		if err := leaf.Insert(slotId, key, value); err == nil {
 			buffer.SetIsDirty(true)
 			return false, nil, page.InvalidPageID, nil
 		} else {
 			// overflowした場合
-			// 新しいleafのBufferを作成
+			// 新しいLeafNodeを作成
 			newLeafBuffer := bufmgr.NewPage()
 			defer bufmgr.UnpinPage(newLeafBuffer.ID(), true)
 
@@ -178,13 +155,13 @@ func (t *BPlusTree) insertInternal(bufmgr *buffer.BufferPoolManager, buffer *pag
 		childNodeBuffer := bufmgr.FetchPage(childPageId)
 		defer bufmgr.UnpinPage(childNodeBuffer.ID(), true)
 
-		overflow, overflowKeyFromChild, overflowChildPageId, err := t.insertInternal(bufmgr, childNodeBuffer, key, value)
+		overflow, overflowKeyFromChild, overflowChildPageId, err := t.insertNode(bufmgr, childNodeBuffer, key, value)
 		if err != nil {
 			return false, nil, page.InvalidPageID, err
 		}
+
 		if overflow {
-			// overflowした場合
-			// branchにInsert
+			// internalNodeにInsert
 			if err := internalNode.Insert(childIdx, overflowKeyFromChild, overflowChildPageId); err == nil {
 				buffer.SetIsDirty(true)
 				return false, nil, page.InvalidPageID, nil
@@ -211,8 +188,9 @@ func (t *BPlusTree) insertInternal(bufmgr *buffer.BufferPoolManager, buffer *pag
 	}
 }
 
+// 指定されたkey, valueをB+Treeに挿入する
 func (t *BPlusTree) Insert(bufmgr *buffer.BufferPoolManager, key []byte, value []byte) error {
-	metaBuffer := bufmgr.FetchPage(t.MetaPageId)
+	metaBuffer := bufmgr.FetchPage(t.metaPageId)
 	defer bufmgr.UnpinPage(metaBuffer.ID(), true)
 	meta := NewMeta(metaBuffer.Data()[:])
 
@@ -220,7 +198,7 @@ func (t *BPlusTree) Insert(bufmgr *buffer.BufferPoolManager, key []byte, value [
 	rootBuffer := bufmgr.FetchPage(rootPageId)
 	defer bufmgr.UnpinPage(rootBuffer.ID(), true)
 
-	overflow, key, childPageId, err := t.insertInternal(bufmgr, rootBuffer, key, value)
+	overflow, key, childPageId, err := t.insertNode(bufmgr, rootBuffer, key, value)
 	if err != nil {
 		return err
 	}
@@ -238,44 +216,4 @@ func (t *BPlusTree) Insert(bufmgr *buffer.BufferPoolManager, key []byte, value [
 		metaBuffer.SetIsDirty(true)
 	}
 	return nil
-}
-
-type BPlusTreeIter struct {
-	buffer *page.Page
-	slotId int
-}
-
-func (it *BPlusTreeIter) Get() ([]byte, []byte, error) {
-	leafNode := NewNode(it.buffer.Data()[:])
-	leaf := NewLeafNode(leafNode.body)
-	if it.slotId < leaf.NumPairs() {
-		pair := leaf.PairAt(it.slotId)
-		return pair.Key, pair.Value, nil
-	}
-	return nil, nil, xerrors.New("end of iterator")
-}
-
-func (it *BPlusTreeIter) Next(bufmgr *buffer.BufferPoolManager) ([]byte, []byte, error) {
-	key, value, err := it.Get()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	it.slotId++
-	leafNode := NewNode(it.buffer.Data()[:])
-	leaf := NewLeafNode(leafNode.body)
-	if it.slotId < leaf.NumPairs() {
-		return key, value, nil
-	}
-	nextPageId, err := leaf.NextPageId()
-	if err != nil {
-		bufmgr.UnpinPage(it.buffer.ID(), false)
-		it.buffer = bufmgr.FetchPage(nextPageId)
-		it.slotId = 0
-	}
-	return key, value, nil
-}
-
-func (it *BPlusTreeIter) Finish(bufmgr *buffer.BufferPoolManager) {
-	bufmgr.UnpinPage(it.buffer.ID(), false)
 }
