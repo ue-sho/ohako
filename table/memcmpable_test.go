@@ -12,19 +12,19 @@ func TestMemCmpAble(t *testing.T) {
 	org2 := []byte("foobarbazhogehuga")
 
 	// when: enc変数にエンコードしたデータを入れる
-	encSize := EncodedSize(len(org1)) + EncodedSize(len(org2))
+	encSize := MemcomparableEncodedSize(len(org1)) + MemcomparableEncodedSize(len(org2))
 	enc := make([]byte, 0, encSize) // 長さ0でcapacity=encSize
 
-	enc = Encode(org1, enc)
-	enc = Encode(org2, enc)
+	enc = MemcomparableEncode(org1, enc)
+	enc = MemcomparableEncode(org2, enc)
 	rest := enc
 
 	// then
 	dec1 := make([]byte, 0, len(rest))
-	rest, dec1 = Decode(rest, dec1)
+	rest, dec1 = MemcomparableDecode(rest, dec1)
 	testingpkg.Equals(t, org1, dec1)
 
 	dec2 := make([]byte, 0, len(rest))
-	_, dec2 = Decode(rest, dec2)
+	_, dec2 = MemcomparableDecode(rest, dec2)
 	testingpkg.Equals(t, org2, dec2)
 }

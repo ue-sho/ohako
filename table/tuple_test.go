@@ -1,22 +1,25 @@
 package table
 
-// import (
-// 	"bytes"
-// 	"testing"
-// )
+import (
+	"testing"
 
-// func TestTuple(t *testing.T) {
-// 	org := [][]byte{
-// 		[]byte("helloworld!memcmpable"),
-// 		[]byte("foobarbazhogehuga"),
-// 	}
+	testingpkg "github.com/ue-sho/ohako/testing"
+)
 
-// 	elems := make([][]byte, 0)
-// 	enc := EncodeTuple(org)
-// 	elems = DecodeTuple(enc, elems)
-// 	for i, r := range elems {
-// 		if !bytes.Equal(r, org[i]) {
-// 			t.Fatalf("Decode() = %v, want %v", r, org)
-// 		}
-// 	}
-// }
+func TestTuple(t *testing.T) {
+	// given
+	org := [][]byte{
+		[]byte("helloworld!memcmpable"),
+		[]byte("foobarbazhogehuga"),
+	}
+
+	// when
+	enc := EncodeTuple(org)
+
+	// then
+	elems := make([][]byte, 0)
+	elems = DecodeTuple(enc, elems)
+	for i, r := range elems {
+		testingpkg.Equals(t, r, org[i])
+	}
+}

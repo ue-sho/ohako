@@ -16,12 +16,12 @@ func min(x, y int) int {
 	return y
 }
 
-func EncodedSize(length int) int {
+func MemcomparableEncodedSize(length int) int {
 	return (length + separationLen) / separationLen * (separationLen + 1)
 }
 
 // srcをエンコード(8文字区切りのデータに)する
-func Encode(src []byte, dst []byte) []byte {
+func MemcomparableEncode(src []byte, dst []byte) []byte {
 	for {
 		copyLen := min(separationLen, len(src))
 		dst = append(dst, src[0:copyLen]...)
@@ -41,7 +41,7 @@ func Encode(src []byte, dst []byte) []byte {
 }
 
 // srcをデコード(8文字区切りのデータを元の形に)する
-func Decode(src []byte, dst []byte) ([]byte, []byte) {
+func MemcomparableDecode(src []byte, dst []byte) ([]byte, []byte) {
 	for {
 		// 何文字のデータか確認
 		extra := src[separationLen]
