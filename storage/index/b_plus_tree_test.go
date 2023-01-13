@@ -14,7 +14,7 @@ import (
 
 // BPlusTreeの中身を出力
 func (t *BPlusTree) dump(bufmgr *buffer.BufferPoolManager) {
-	metaBuffer := bufmgr.FetchPage(t.metaPageId)
+	metaBuffer := bufmgr.FetchPage(t.MetaPageId)
 	defer bufmgr.UnpinPage(metaBuffer.ID(), false)
 	meta := NewMeta(metaBuffer.Data()[:])
 
