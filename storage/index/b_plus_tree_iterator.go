@@ -35,12 +35,15 @@ func (it *BPlusTreeIter) Next(bufmgr *buffer.BufferPoolManager) ([]byte, []byte,
 	if it.slotId < leaf.NumPairs() {
 		return key, value, nil
 	}
+
 	nextPageId, err := leaf.NextPageId()
-	if err != nil {
-		bufmgr.UnpinPage(it.buffer.ID(), false)
-		it.buffer = bufmgr.FetchPage(nextPageId)
-		it.slotId = 0
+	if err != nil && nextPageId == page.InvalidPageID {
+		return key, value, nil
 	}
+
+	bufmgr.UnpinPage(it.buffer.ID(), false)
+	it.buffer = bufmgr.FetchPage(nextPageId)
+	it.slotId = 0
 	return key, value, nil
 }
 
