@@ -7,7 +7,12 @@ import (
 )
 
 type BPlusTree struct {
-	metaPageId page.PageID // メタ情報が書くのされたページのID
+	MetaPageId page.PageID // メタ情報が書くのされたページのID
+}
+
+// メタ情報のページIDからBPlusTreeを生成する
+func NewBPlusTree(metaPageId page.PageID) *BPlusTree {
+	return &BPlusTree{metaPageId}
 }
 
 // BPlusTreeインスタンスを生成する
@@ -26,7 +31,7 @@ func CreateBPlusTree(bufmgr *buffer.BufferPoolManager) (*BPlusTree, error) {
 	leaf.Initialize()
 
 	meta.header.rootPageId = rootPage.ID()
-	return &BPlusTree{metaPage.ID()}, nil
+	return NewBPlusTree(metaPage.ID()), nil
 }
 
 // メタデータからアプリケーションで使う保存領域を読み出す
@@ -56,13 +61,13 @@ func (t *BPlusTree) WriteMetaAppArea(bufmgr *buffer.BufferPoolManager, data []by
 
 // メタページを取得する
 func (t *BPlusTree) fetchMetaPage(bufmgr *buffer.BufferPoolManager) *page.Page {
-	metaBuffer := bufmgr.FetchPage(t.metaPageId)
+	metaBuffer := bufmgr.FetchPage(t.MetaPageId)
 	return metaBuffer
 }
 
 // ルートページを取得する
 func (t *BPlusTree) fetchRootPage(bufmgr *buffer.BufferPoolManager) (*page.Page, error) {
-	metaBuffer := bufmgr.FetchPage(t.metaPageId)
+	metaBuffer := bufmgr.FetchPage(t.MetaPageId)
 	defer bufmgr.UnpinPage(metaBuffer.ID(), false)
 
 	meta := NewMeta(metaBuffer.Data()[:])
@@ -190,7 +195,7 @@ func (t *BPlusTree) insertNode(bufmgr *buffer.BufferPoolManager, buffer *page.Pa
 
 // 指定されたkey, valueをB+Treeに挿入する
 func (t *BPlusTree) Insert(bufmgr *buffer.BufferPoolManager, key []byte, value []byte) error {
-	metaBuffer := bufmgr.FetchPage(t.metaPageId)
+	metaBuffer := bufmgr.FetchPage(t.MetaPageId)
 	defer bufmgr.UnpinPage(metaBuffer.ID(), true)
 	meta := NewMeta(metaBuffer.Data()[:])
 
