@@ -2,7 +2,6 @@ package buffer
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/ue-sho/ohako/storage/disk"
 	"github.com/ue-sho/ohako/storage/page"
@@ -47,7 +46,6 @@ func (b *BufferPoolManager) FetchPage(pageID page.PageID) *page.Page {
 	data := make([]byte, page.PageSize)
 	err := b.diskManager.ReadPage(pageID, data)
 	if err != nil {
-		fmt.Println("nil !?!>!??! ", err)
 		return nil
 	}
 	var pageData [page.PageSize]byte

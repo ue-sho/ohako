@@ -1,7 +1,9 @@
 package table
 
+type Tuple [][]byte
+
 // バイナリデータリストをエンコードする
-func EncodeTuple(elems [][]byte) []byte {
+func EncodeTuple(elems Tuple) []byte {
 	encSize := 0
 	for _, elem := range elems {
 		encSize += MemcomparableEncodedSize(len(elem))
@@ -14,7 +16,7 @@ func EncodeTuple(elems [][]byte) []byte {
 }
 
 // バイナリデータリストにデコードする
-func DecodeTuple(bytes []byte, elems [][]byte) [][]byte {
+func DecodeTuple(bytes []byte, elems Tuple) Tuple {
 	rest := bytes
 	for len(rest) > 0 {
 		elem := make([]byte, 0, len(bytes))

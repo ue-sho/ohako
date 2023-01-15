@@ -22,7 +22,7 @@ func (t *SimpleTable) Create(bufmgr *buffer.BufferPoolManager) error {
 }
 
 // レコードを挿入する
-func (t *SimpleTable) Insert(bufmgr *buffer.BufferPoolManager, record [][]byte) error {
+func (t *SimpleTable) Insert(bufmgr *buffer.BufferPoolManager, record Tuple) error {
 	tree := index.NewBPlusTree(t.MetaPageId)
 	key := EncodeTuple(record[:t.NumKeyElems])
 	value := EncodeTuple(record[t.NumKeyElems:])
