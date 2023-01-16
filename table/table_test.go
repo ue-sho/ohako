@@ -11,9 +11,8 @@ import (
 	testingpkg "github.com/ue-sho/ohako/testing"
 )
 
-func TestTableCreateInsert(t *testing.T) {
-	// given
-	file, err := os.Create("table_test.ohk")
+func tableCreate(fileName string, uniqIdxs []UniqueIndex) *Table {
+	file, err := os.Create(fileName)
 	if err != nil {
 		panic(err)
 	}
@@ -30,8 +29,9 @@ func TestTableCreateInsert(t *testing.T) {
 
 	// テーブル作成
 	tbl := Table{
-		MetaPageId:  page.InvalidPageID,
-		NumKeyElems: 1,
+		MetaPageId:    page.InvalidPageID,
+		NumKeyElems:   1,
+		UniqueIndices: uniqIdxs,
 	}
 	err = tbl.Create(bufmgr)
 	if err != nil {
@@ -47,24 +47,32 @@ func TestTableCreateInsert(t *testing.T) {
 	}
 	// 書き込みを行う
 	for _, row := range rows {
-		// when
 		err = tbl.Insert(bufmgr, row)
-
-		// then: エラーが発生しない
-		testingpkg.Equals(t, nil, err)
+		if err != nil {
+			panic(err)
+		}
 	}
 	bufmgr.FlushAllpages()
+	return &tbl
 }
 
-// TestTableCreateInsert()で作成したデータからテストするため、必ず一緒に行う
+func deleteTable(fileName string) {
+	os.Remove(fileName)
+}
+
 func TestTableExact(t *testing.T) {
-	// given: TestTableCreateInsert作成したファイルからDiskManagerを作成
-	dm := disk.NewDiskManagerImpl("table_test.ohk")
+	// given
+	dbFile := "table_test.ohk"
+	table := tableCreate(dbFile, []UniqueIndex{})
+	defer deleteTable(dbFile)
+
+	// tableCreateで作成したDBファイルからDiskManagerを作成
+	dm := disk.NewDiskManagerImpl(dbFile)
 	defer dm.ShutDown()
 	poolSize := uint32(10)
 	bufmgr := buffer.NewBufferPoolManager(poolSize, dm)
 
-	tree := index.NewBPlusTree(page.PageID(0)) // metaPageIDはテーブルがひとつしかない場合は基本0になる
+	tree := index.NewBPlusTree(table.MetaPageId)
 
 	// when: key=xのデータを探す
 	searchKey := EncodeTuple([][]byte{[]byte("x")})
@@ -98,20 +106,31 @@ func TestTableExact(t *testing.T) {
 		testingpkg.Equals(t, tt.value1, record[1])
 		testingpkg.Equals(t, tt.value2, record[2])
 	}
-
-	os.Remove("table_test.ohk")
 }
+
 func TestTableSecondaryIndex(t *testing.T) {
-	// given: TestTableCreateInsert作成したファイルからDiskManagerを作成
-	dm := disk.NewDiskManagerImpl("table_test.ohk")
+	// given
+	dbFile := "table_test.ohk"
+
+	uniqIdxs := []UniqueIndex{
+		UniqueIndex{
+			MetaPageId: page.InvalidPageID,
+			SKey:       []int{2},
+		},
+	}
+
+	table := tableCreate(dbFile, uniqIdxs)
+	defer deleteTable(dbFile)
+
+	dm := disk.NewDiskManagerImpl(dbFile)
 	defer dm.ShutDown()
 	poolSize := uint32(10)
 	bufmgr := buffer.NewBufferPoolManager(poolSize, dm)
 
-	tree := index.NewBPlusTree(page.PageID(0)) // metaPageIDはテーブルがひとつしかない場合は基本0になる
+	tree := index.NewBPlusTree(table.UniqueIndices[0].MetaPageId) // UniqueIndexのMetaPageID
 
-	// when: key=xのデータを探す
-	searchKey := EncodeTuple([][]byte{[]byte("x")})
+	// when: secondrayKey=Brownのデータを探す
+	searchKey := EncodeTuple([][]byte{[]byte("Brown")})
 	iter, err := tree.Search(bufmgr, &index.SearchModeKey{Key: searchKey})
 	if err != nil {
 		panic(err)
@@ -120,13 +139,14 @@ func TestTableSecondaryIndex(t *testing.T) {
 
 	// then: key=x ~ 最後まで(z)を探索する
 	tests := []struct {
-		key    []byte
-		value1 []byte
-		value2 []byte
+		secondaryKey []byte
+		primaryKey   []byte
 	}{
-		{[]byte("x"), []byte("Bob"), []byte("Johnson")},
-		{[]byte("y"), []byte("Charlie"), []byte("Williams")},
-		{[]byte("z"), []byte("Alice"), []byte("Smith")},
+		{[]byte("Brown"), []byte("v")},
+		{[]byte("Johnson"), []byte("x")},
+		{[]byte("Miller"), []byte("w")},
+		{[]byte("Smith"), []byte("z")},
+		{[]byte("Williams"), []byte("y")},
 	}
 	for _, tt := range tests {
 		key, value, err := iter.Next(bufmgr)
@@ -138,10 +158,7 @@ func TestTableSecondaryIndex(t *testing.T) {
 		record = DecodeTuple(value, record)
 
 		// testingpkg.PrintTableRecord(record)
-		testingpkg.Equals(t, tt.key, record[0])
-		testingpkg.Equals(t, tt.value1, record[1])
-		testingpkg.Equals(t, tt.value2, record[2])
+		testingpkg.Equals(t, tt.secondaryKey, record[0])
+		testingpkg.Equals(t, tt.primaryKey, record[1])
 	}
-
-	os.Remove("table_test.ohk")
 }

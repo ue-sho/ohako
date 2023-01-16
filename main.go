@@ -13,7 +13,7 @@ import (
 )
 
 func tableCreate(bufmgr *buffer.BufferPoolManager) {
-	tbl := table.SimpleTable{
+	tbl := table.Table{
 		MetaPageId:  page.InvalidPageID,
 		NumKeyElems: 1,
 	}
