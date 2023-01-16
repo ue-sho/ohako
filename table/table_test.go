@@ -11,9 +11,9 @@ import (
 	testingpkg "github.com/ue-sho/ohako/testing"
 )
 
-func TestSimpleTableCreateInsert(t *testing.T) {
+func TestTableCreateInsert(t *testing.T) {
 	// given
-	file, err := os.Create("simple.ohk")
+	file, err := os.Create("table_test.ohk")
 	if err != nil {
 		panic(err)
 	}
@@ -29,7 +29,7 @@ func TestSimpleTableCreateInsert(t *testing.T) {
 	bufmgr := buffer.NewBufferPoolManager(poolSize, dm)
 
 	// テーブル作成
-	tbl := SimpleTable{
+	tbl := Table{
 		MetaPageId:  page.InvalidPageID,
 		NumKeyElems: 1,
 	}
@@ -56,10 +56,10 @@ func TestSimpleTableCreateInsert(t *testing.T) {
 	bufmgr.FlushAllpages()
 }
 
-// TestSimpleTableCreateInsert()で作成したデータからテストするため、必ず一緒に行う
-func TestSimpleTableExact(t *testing.T) {
-	// given: TestSimpleTableCreateInsert作成したファイルからDiskManagerを作成
-	dm := disk.NewDiskManagerImpl("simple.ohk")
+// TestTableCreateInsert()で作成したデータからテストするため、必ず一緒に行う
+func TestTableExact(t *testing.T) {
+	// given: TestTableCreateInsert作成したファイルからDiskManagerを作成
+	dm := disk.NewDiskManagerImpl("table_test.ohk")
 	defer dm.ShutDown()
 	poolSize := uint32(10)
 	bufmgr := buffer.NewBufferPoolManager(poolSize, dm)
@@ -99,5 +99,49 @@ func TestSimpleTableExact(t *testing.T) {
 		testingpkg.Equals(t, tt.value2, record[2])
 	}
 
-	os.Remove("simple.ohk")
+	os.Remove("table_test.ohk")
+}
+func TestTableSecondaryIndex(t *testing.T) {
+	// given: TestTableCreateInsert作成したファイルからDiskManagerを作成
+	dm := disk.NewDiskManagerImpl("table_test.ohk")
+	defer dm.ShutDown()
+	poolSize := uint32(10)
+	bufmgr := buffer.NewBufferPoolManager(poolSize, dm)
+
+	tree := index.NewBPlusTree(page.PageID(0)) // metaPageIDはテーブルがひとつしかない場合は基本0になる
+
+	// when: key=xのデータを探す
+	searchKey := EncodeTuple([][]byte{[]byte("x")})
+	iter, err := tree.Search(bufmgr, &index.SearchModeKey{Key: searchKey})
+	if err != nil {
+		panic(err)
+	}
+	defer iter.Finish(bufmgr)
+
+	// then: key=x ~ 最後まで(z)を探索する
+	tests := []struct {
+		key    []byte
+		value1 []byte
+		value2 []byte
+	}{
+		{[]byte("x"), []byte("Bob"), []byte("Johnson")},
+		{[]byte("y"), []byte("Charlie"), []byte("Williams")},
+		{[]byte("z"), []byte("Alice"), []byte("Smith")},
+	}
+	for _, tt := range tests {
+		key, value, err := iter.Next(bufmgr)
+		if err != nil {
+			break
+		}
+		record := make([][]byte, 0)
+		record = DecodeTuple(key, record)
+		record = DecodeTuple(value, record)
+
+		// testingpkg.PrintTableRecord(record)
+		testingpkg.Equals(t, tt.key, record[0])
+		testingpkg.Equals(t, tt.value1, record[1])
+		testingpkg.Equals(t, tt.value2, record[2])
+	}
+
+	os.Remove("table_test.ohk")
 }
