@@ -2,8 +2,8 @@ package disk
 
 import (
 	"errors"
+	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/ue-sho/ohako/storage/page"
@@ -22,13 +22,13 @@ type DiskManagerImpl struct {
 func NewDiskManagerImpl(dbFilename string) DiskManager {
 	file, err := os.OpenFile(dbFilename, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
-		log.Fatalln("can't open db file")
+		fmt.Println("can't open db file")
 		return nil
 	}
 
 	fileInfo, err := file.Stat()
 	if err != nil {
-		log.Fatalln("file info error")
+		fmt.Println("file info error")
 		return nil
 	}
 
