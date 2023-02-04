@@ -1,6 +1,8 @@
 package index
 
 import (
+	"errors"
+
 	"github.com/ue-sho/ohako/storage/buffer"
 	"github.com/ue-sho/ohako/storage/page"
 	"golang.org/x/xerrors"
@@ -114,7 +116,7 @@ func (t *BPlusTree) insertNode(bufmgr *buffer.BufferPoolManager, buffer *page.Pa
 		leaf := NewLeafNode(node.body)
 		slotId, result := leaf.SearchSlotId(key)
 		if result {
-			return false, nil, page.InvalidPageID, xerrors.New("duplicate key")
+			return false, nil, page.InvalidPageID, errors.New("duplicate key")
 		}
 
 		if err := leaf.Insert(slotId, key, value); err == nil {

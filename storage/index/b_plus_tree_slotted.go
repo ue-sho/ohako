@@ -1,9 +1,8 @@
 package index
 
 import (
+	"errors"
 	"unsafe"
-
-	"golang.org/x/xerrors"
 )
 
 type SlottedHeader struct {
@@ -92,12 +91,12 @@ func (s *Slotted) Initialize() {
 // データの書き込みはWriteDataを使用する
 func (s *Slotted) Insert(index int, length int) error {
 	if s.FreeSpace() < pointerSize+length {
-		return xerrors.New("no free space")
+		return errors.New("no free space")
 	}
 
 	numSlotsOrig := s.NumSlots()
 	if index < 0 || numSlotsOrig < index {
-		return xerrors.New("invalid index")
+		return errors.New("invalid index")
 	}
 
 	s.header.freeSpaceOffset -= uint16(length)
@@ -134,7 +133,7 @@ func (s *Slotted) Remove(index int) {
 // 指定indexのデータ長さを変更する
 func (s *Slotted) Resize(index int, lenNew int) error {
 	if index < 0 || s.NumSlots() <= index {
-		xerrors.New("invalid index")
+		errors.New("invalid index")
 	}
 
 	pointers := s.pointers()
@@ -143,7 +142,7 @@ func (s *Slotted) Resize(index int, lenNew int) error {
 		return nil
 	}
 	if lenIncr > s.FreeSpace() {
-		return xerrors.New("no free space")
+		return errors.New("no free space")
 	}
 
 	freeSpaceOffset := s.header.freeSpaceOffset

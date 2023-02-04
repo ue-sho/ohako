@@ -2,6 +2,7 @@ package index
 
 import (
 	"bytes"
+	"errors"
 	"unsafe"
 
 	"github.com/ue-sho/ohako/storage/page"
@@ -105,7 +106,7 @@ func (b *InternalNode) Insert(slotId int, key []byte, pageId page.PageID) error 
 	pair := Pair{Key: key, Value: pageId.Serialize()}
 	pairBytes := pair.ToBytes()
 	if len(pairBytes) > b.MaxPairSize() {
-		return xerrors.New("too long data")
+		return errors.New("too long data")
 	}
 	err := b.body.Insert(slotId, len(pairBytes))
 	if err != nil {

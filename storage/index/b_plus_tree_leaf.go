@@ -2,6 +2,7 @@ package index
 
 import (
 	"bytes"
+	"errors"
 	"unsafe"
 
 	"github.com/ue-sho/ohako/storage/page"
@@ -34,7 +35,7 @@ func NewLeafNode(bytes []byte) *LeafNode {
 // 前のページID
 func (l *LeafNode) PrevPageId() (page.PageID, error) {
 	if !l.header.prevPageId.IsValid() {
-		return page.InvalidPageID, xerrors.New("invalid page id")
+		return page.InvalidPageID, errors.New("invalid page id")
 	}
 	return l.header.prevPageId, nil
 }
@@ -42,7 +43,7 @@ func (l *LeafNode) PrevPageId() (page.PageID, error) {
 // 次のページID
 func (l *LeafNode) NextPageId() (page.PageID, error) {
 	if !l.header.nextPageId.IsValid() {
-		return page.InvalidPageID, xerrors.New("invalid page id")
+		return page.InvalidPageID, errors.New("invalid page id")
 	}
 	return l.header.nextPageId, nil
 }
@@ -93,7 +94,7 @@ func (l *LeafNode) Insert(slotId int, key []byte, value []byte) error {
 	pair := Pair{Key: key, Value: value}
 	pairBytes := pair.ToBytes()
 	if len(pairBytes) > l.MaxPairSize() {
-		return xerrors.New("too long data")
+		return errors.New("too long data")
 	}
 	err := l.body.Insert(slotId, len(pairBytes))
 	if err != nil {
