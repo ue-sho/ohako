@@ -3,10 +3,10 @@ package index
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"unsafe"
 
 	"github.com/ue-sho/ohako/storage/page"
-	"golang.org/x/xerrors"
 )
 
 type InternalNodeHeader struct {
@@ -23,7 +23,8 @@ func NewInternalNode(bytes []byte) *InternalNode {
 	internalNode := InternalNode{}
 	headerSize := int(unsafe.Sizeof(*internalNode.header))
 	if headerSize+1 > len(bytes) {
-		panic("Internal header must be aligned")
+		fmt.Println("Internal header must be aligned")
+		return nil
 	}
 
 	internalNode.header = (*InternalNodeHeader)(unsafe.Pointer(&bytes[0]))
@@ -81,13 +82,14 @@ func (b *InternalNode) MaxPairSize() int {
 }
 
 // InternalNodeの初期化を行う
-func (b *InternalNode) Initialize(key []byte, leftChild page.PageID, rightChild page.PageID) {
+func (b *InternalNode) Initialize(key []byte, leftChild page.PageID, rightChild page.PageID) error {
 	b.body.Initialize()
 	err := b.Insert(0, key, leftChild)
 	if err != nil {
-		panic(xerrors.Errorf("new leaf must have space: %v", err))
+		return errors.New("new leaf must have space")
 	}
 	b.header.rightChild = rightChild
+	return nil
 }
 
 // 末尾のデータを右の子として参照する
@@ -122,17 +124,18 @@ func (b *InternalNode) isHalfFull() bool {
 }
 
 // 自InternalNodeのデータを新規InternalNodeの容量が半分になるまで分割挿入する
-func (b *InternalNode) SplitInsert(newInternal *InternalNode, newKey []byte, newPageId page.PageID) []byte {
+func (b *InternalNode) SplitInsert(newInternal *InternalNode, newKey []byte, newPageId page.PageID) ([]byte, error) {
 	newInternal.body.Initialize()
 	for {
 		if newInternal.isHalfFull() {
 			index, result := b.SearchSlotId(newKey)
 			if result {
-				panic("key must be unique")
+				return nil, errors.New("key must be unique")
 			}
 			err := b.Insert(index, newKey, newPageId)
 			if err != nil {
-				panic(xerrors.Errorf("old Internal must have space: %v", err))
+				fmt.Println(err)
+				return nil, errors.New("old Internal must have space")
 			}
 			break
 		}
@@ -141,7 +144,8 @@ func (b *InternalNode) SplitInsert(newInternal *InternalNode, newKey []byte, new
 		} else {
 			err := newInternal.Insert(newInternal.NumPairs(), newKey, newPageId)
 			if err != nil {
-				panic(xerrors.Errorf("new Internal must have space: %v", err))
+				fmt.Println(err)
+				return nil, errors.New("new Internal must have space")
 			}
 			for !newInternal.isHalfFull() {
 				b.Transfer(newInternal)
@@ -149,17 +153,19 @@ func (b *InternalNode) SplitInsert(newInternal *InternalNode, newKey []byte, new
 			break
 		}
 	}
-	return newInternal.FillRightChild()
+	return newInternal.FillRightChild(), nil
 }
 
 // 先頭データを指定InternalNodeの末尾に移動させる
-func (b *InternalNode) Transfer(dest *InternalNode) {
+func (b *InternalNode) Transfer(dest *InternalNode) error {
 	nextIndex := dest.NumPairs()
 	srcBody := b.body.ReadData(0)
 	err := dest.body.Insert(nextIndex, len(srcBody))
 	if err != nil {
-		panic(xerrors.Errorf("no space in dest Internal: %v", err))
+		fmt.Println(err)
+		return errors.New("no space in dest Internal")
 	}
 	dest.body.WriteData(nextIndex, srcBody)
 	b.body.Remove(0)
+	return nil
 }

@@ -5,7 +5,6 @@ import (
 
 	"github.com/ue-sho/ohako/storage/buffer"
 	"github.com/ue-sho/ohako/storage/page"
-	"golang.org/x/xerrors"
 )
 
 type BPlusTree struct {
@@ -54,7 +53,7 @@ func (t *BPlusTree) WriteMetaAppArea(bufmgr *buffer.BufferPoolManager, data []by
 
 	meta := NewMeta(metaBuffer.Data()[:])
 	if len(meta.appArea) < len(data) {
-		return xerrors.Errorf("too long data")
+		return errors.New("too long data")
 	}
 	copy(meta.appArea, data)
 	*(meta.appAreaLength) = uint64(len(data))
@@ -95,7 +94,7 @@ func (t *BPlusTree) searchNode(bufmgr *buffer.BufferPoolManager, page *page.Page
 		childNodePage := bufmgr.FetchPage(childPageId)
 		return t.searchNode(bufmgr, childNodePage, searchMode)
 	default:
-		panic("unreachable")
+		return nil, errors.New("unreachable")
 	}
 }
 
@@ -148,7 +147,10 @@ func (t *BPlusTree) insertNode(bufmgr *buffer.BufferPoolManager, buffer *page.Pa
 			newLeafNode.SetNodeType(NodeTypeLeaf)
 			newLeaf := NewLeafNode(newLeafNode.body)
 			newLeaf.Initialize()
-			overflowKey := leaf.SplitInsert(newLeaf, key, value)
+			overflowKey, err := leaf.SplitInsert(newLeaf, key, value)
+			if err != nil {
+				return false, nil, page.InvalidPageID, err
+			}
 			newLeaf.SetNextPageId(buffer.ID())
 			newLeaf.SetPrevPageId(prevLeafPageId)
 			buffer.SetIsDirty(true)
@@ -181,7 +183,10 @@ func (t *BPlusTree) insertNode(bufmgr *buffer.BufferPoolManager, buffer *page.Pa
 				newBranchNode := NewNode(newBranchBuffer.Data()[:])
 				newBranchNode.SetNodeType(NodeTypeInternal)
 				NewInternalNode := NewInternalNode(newBranchNode.body)
-				overflowKey := internalNode.SplitInsert(NewInternalNode, overflowKeyFromChild, overflowChildPageId)
+				overflowKey, err := internalNode.SplitInsert(NewInternalNode, overflowKeyFromChild, overflowChildPageId)
+				if err != nil {
+					return false, nil, page.InvalidPageID, err
+				}
 				buffer.SetIsDirty(true)
 				newBranchBuffer.SetIsDirty(true)
 				return true, overflowKey, newBranchBuffer.ID(), nil
@@ -191,7 +196,7 @@ func (t *BPlusTree) insertNode(bufmgr *buffer.BufferPoolManager, buffer *page.Pa
 		}
 
 	default:
-		panic("unreachable")
+		return false, nil, page.InvalidPageID, errors.New("unreachable")
 	}
 }
 

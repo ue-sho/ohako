@@ -121,10 +121,11 @@ func TestLeafNodeSplitInsert(t *testing.T) {
 	newLeafPage := NewLeafNode(newPageData)
 
 	// when
-	mid := leafPage.SplitInsert(newLeafPage, []byte("hoge"), []byte("fuga"))
+	mid, nil := leafPage.SplitInsert(newLeafPage, []byte("hoge"), []byte("fuga"))
 
 	// then: key=ohakoを起点に分割挿入
 	testingpkg.Equals(t, []byte("ohako"), mid)
+	testingpkg.Equals(t, nil, err)
 
 	originNodetests := []struct {
 		key   []byte

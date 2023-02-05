@@ -2,6 +2,7 @@ package index
 
 import (
 	"errors"
+	"fmt"
 	"unsafe"
 )
 
@@ -113,14 +114,14 @@ func (s *Slotted) Insert(index int, length int) error {
 }
 
 // indexのデータを削除する
-func (s *Slotted) Remove(index int) {
+func (s *Slotted) Remove(index int) error {
 	numSlots := s.NumSlots()
 	if index < 0 || numSlots <= index {
-		panic("invalid index")
+		return errors.New("invalid index")
 	}
 
 	if err := s.Resize(index, 0); err != nil {
-		panic(err)
+		return err
 	}
 
 	pointers := s.pointers()
@@ -128,12 +129,13 @@ func (s *Slotted) Remove(index int) {
 		*pointers[i-1] = *pointers[i]
 	}
 	s.header.numSlots--
+	return nil
 }
 
 // 指定indexのデータ長さを変更する
 func (s *Slotted) Resize(index int, lenNew int) error {
 	if index < 0 || s.NumSlots() <= index {
-		errors.New("invalid index")
+		return errors.New("invalid index")
 	}
 
 	pointers := s.pointers()
@@ -186,7 +188,8 @@ func NewSlotted(bytes []byte) *Slotted {
 	slotted := Slotted{}
 	headerSize := int(unsafe.Sizeof(*slotted.header))
 	if headerSize+1 > len(bytes) {
-		panic("slotted header must be aligned")
+		fmt.Println("slotted header must be aligned")
+		return nil
 	}
 
 	slotted.header = (*SlottedHeader)(unsafe.Pointer(&bytes[0]))
