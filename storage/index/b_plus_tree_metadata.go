@@ -1,6 +1,7 @@
 package index
 
 import (
+	"fmt"
 	"unsafe"
 
 	"github.com/ue-sho/ohako/storage/page"
@@ -24,7 +25,8 @@ func NewMeta(bytes []byte) *MetaData {
 
 	headerSize := int(unsafe.Sizeof(*meta.header))
 	if headerSize+1 > len(bytes) {
-		panic("meta header must be aligned")
+		fmt.Println("meta header must be aligned")
+		return nil
 	}
 
 	meta.header = (*MetaHeader)(unsafe.Pointer(&bytes[0]))

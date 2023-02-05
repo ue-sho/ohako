@@ -1,9 +1,10 @@
 package index
 
 import (
+	"errors"
+
 	"github.com/ue-sho/ohako/storage/buffer"
 	"github.com/ue-sho/ohako/storage/page"
-	"golang.org/x/xerrors"
 )
 
 type BPlusTreeIter struct {
@@ -19,7 +20,7 @@ func (it *BPlusTreeIter) Get() ([]byte, []byte, error) {
 		pair := leaf.PairAt(it.slotId)
 		return pair.Key, pair.Value, nil
 	}
-	return nil, nil, xerrors.New("end of iterator")
+	return nil, nil, errors.New("end of iterator")
 }
 
 // 次のイテレータに進む

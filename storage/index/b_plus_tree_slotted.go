@@ -1,9 +1,9 @@
 package index
 
 import (
+	"errors"
+	"fmt"
 	"unsafe"
-
-	"golang.org/x/xerrors"
 )
 
 type SlottedHeader struct {
@@ -92,12 +92,12 @@ func (s *Slotted) Initialize() {
 // データの書き込みはWriteDataを使用する
 func (s *Slotted) Insert(index int, length int) error {
 	if s.FreeSpace() < pointerSize+length {
-		return xerrors.New("no free space")
+		return errors.New("no free space")
 	}
 
 	numSlotsOrig := s.NumSlots()
 	if index < 0 || numSlotsOrig < index {
-		return xerrors.New("invalid index")
+		return errors.New("invalid index")
 	}
 
 	s.header.freeSpaceOffset -= uint16(length)
@@ -114,14 +114,14 @@ func (s *Slotted) Insert(index int, length int) error {
 }
 
 // indexのデータを削除する
-func (s *Slotted) Remove(index int) {
+func (s *Slotted) Remove(index int) error {
 	numSlots := s.NumSlots()
 	if index < 0 || numSlots <= index {
-		panic("invalid index")
+		return errors.New("invalid index")
 	}
 
 	if err := s.Resize(index, 0); err != nil {
-		panic(err)
+		return err
 	}
 
 	pointers := s.pointers()
@@ -129,12 +129,13 @@ func (s *Slotted) Remove(index int) {
 		*pointers[i-1] = *pointers[i]
 	}
 	s.header.numSlots--
+	return nil
 }
 
 // 指定indexのデータ長さを変更する
 func (s *Slotted) Resize(index int, lenNew int) error {
 	if index < 0 || s.NumSlots() <= index {
-		xerrors.New("invalid index")
+		return errors.New("invalid index")
 	}
 
 	pointers := s.pointers()
@@ -143,7 +144,7 @@ func (s *Slotted) Resize(index int, lenNew int) error {
 		return nil
 	}
 	if lenIncr > s.FreeSpace() {
-		return xerrors.New("no free space")
+		return errors.New("no free space")
 	}
 
 	freeSpaceOffset := s.header.freeSpaceOffset
@@ -187,7 +188,8 @@ func NewSlotted(bytes []byte) *Slotted {
 	slotted := Slotted{}
 	headerSize := int(unsafe.Sizeof(*slotted.header))
 	if headerSize+1 > len(bytes) {
-		panic("slotted header must be aligned")
+		fmt.Println("slotted header must be aligned")
+		return nil
 	}
 
 	slotted.header = (*SlottedHeader)(unsafe.Pointer(&bytes[0]))

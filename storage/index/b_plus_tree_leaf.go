@@ -2,10 +2,11 @@ package index
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"unsafe"
 
 	"github.com/ue-sho/ohako/storage/page"
-	"golang.org/x/xerrors"
 )
 
 type LeafNodeHeader struct {
@@ -23,7 +24,8 @@ func NewLeafNode(bytes []byte) *LeafNode {
 	leaf := LeafNode{}
 	headerSize := int(unsafe.Sizeof(*leaf.header))
 	if headerSize+1 > len(bytes) {
-		panic("leaf header must be aligned")
+		fmt.Println("leaf header must be aligned")
+		return nil
 	}
 
 	leaf.header = (*LeafNodeHeader)(unsafe.Pointer(&bytes[0]))
@@ -34,7 +36,7 @@ func NewLeafNode(bytes []byte) *LeafNode {
 // 前のページID
 func (l *LeafNode) PrevPageId() (page.PageID, error) {
 	if !l.header.prevPageId.IsValid() {
-		return page.InvalidPageID, xerrors.New("invalid page id")
+		return page.InvalidPageID, errors.New("invalid page id")
 	}
 	return l.header.prevPageId, nil
 }
@@ -42,7 +44,7 @@ func (l *LeafNode) PrevPageId() (page.PageID, error) {
 // 次のページID
 func (l *LeafNode) NextPageId() (page.PageID, error) {
 	if !l.header.nextPageId.IsValid() {
-		return page.InvalidPageID, xerrors.New("invalid page id")
+		return page.InvalidPageID, errors.New("invalid page id")
 	}
 	return l.header.nextPageId, nil
 }
@@ -93,7 +95,7 @@ func (l *LeafNode) Insert(slotId int, key []byte, value []byte) error {
 	pair := Pair{Key: key, Value: value}
 	pairBytes := pair.ToBytes()
 	if len(pairBytes) > l.MaxPairSize() {
-		return xerrors.New("too long data")
+		return errors.New("too long data")
 	}
 	err := l.body.Insert(slotId, len(pairBytes))
 	if err != nil {
@@ -109,17 +111,18 @@ func (l *LeafNode) isHalfFull() bool {
 }
 
 // 自LeafNodeのデータを新規LeafNodeの容量が半分になるまで分割挿入する
-func (l *LeafNode) SplitInsert(newLeaf *LeafNode, newKey []byte, newValue []byte) []byte {
+func (l *LeafNode) SplitInsert(newLeaf *LeafNode, newKey []byte, newValue []byte) ([]byte, error) {
 	newLeaf.Initialize()
 	for {
 		if newLeaf.isHalfFull() {
 			index, result := l.SearchSlotId(newKey)
 			if result {
-				panic("key must be unique")
+				return nil, errors.New("key must be unique")
 			}
 			err := l.Insert(index, newKey, newValue)
 			if err != nil {
-				panic(xerrors.Errorf("old leaf must have space: %v", err))
+				fmt.Println(err)
+				return nil, errors.New("old leaf must have space")
 			}
 			break
 		}
@@ -128,7 +131,8 @@ func (l *LeafNode) SplitInsert(newLeaf *LeafNode, newKey []byte, newValue []byte
 		} else {
 			err := newLeaf.Insert(newLeaf.NumPairs(), newKey, newValue)
 			if err != nil {
-				panic(xerrors.Errorf("new leaf must have space: %v", err))
+				fmt.Println(err)
+				return nil, errors.New("new leaf must have space")
 			}
 			for !newLeaf.isHalfFull() {
 				l.Transfer(newLeaf)
@@ -136,17 +140,18 @@ func (l *LeafNode) SplitInsert(newLeaf *LeafNode, newKey []byte, newValue []byte
 			break
 		}
 	}
-	return l.PairAt(0).Key
+	return l.PairAt(0).Key, nil
 }
 
 // 先頭データを指定InternalNodeの末尾に移動させる
-func (l *LeafNode) Transfer(dest *LeafNode) {
+func (l *LeafNode) Transfer(dest *LeafNode) error {
 	nextIndex := dest.NumPairs()
 	srcBody := l.body.ReadData(0)
 	err := dest.body.Insert(nextIndex, len(srcBody))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	dest.body.WriteData(nextIndex, srcBody)
 	l.body.Remove(0)
+	return nil
 }

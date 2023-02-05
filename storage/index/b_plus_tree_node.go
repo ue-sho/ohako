@@ -1,6 +1,7 @@
 package index
 
 import (
+	"fmt"
 	"unsafe"
 )
 
@@ -26,7 +27,8 @@ func NewNode(data []byte) *Node {
 	node := Node{}
 	headerSize := int(unsafe.Sizeof(*node.header))
 	if headerSize+1 > len(data) {
-		panic("Node header must be aligned")
+		fmt.Println("Node header must be aligned")
+		return nil
 	}
 
 	node.header = (*NodeHeader)(unsafe.Pointer(&data[0]))

@@ -72,13 +72,14 @@ func TestInternalNodeSplit(t *testing.T) {
 	internalNode2 := NewInternalNode(data2)
 
 	// when: { key=10, value=PageID(5) }を起点に分割挿入する
-	midKey := internalNode.SplitInsert(internalNode2, testingpkg.Uint64ToBytes(10), page.PageID(5))
+	midKey, err := internalNode.SplitInsert(internalNode2, testingpkg.Uint64ToBytes(10), page.PageID(5))
 
 	// then: 分割の分岐点はkey=8 (8がRootとなり分割される)
 	// 初期のInternalNodeのペア数は2, 新規InternalNodeのペア数は1に分割される
 	testingpkg.Equals(t, midKey, testingpkg.Uint64ToBytes(8))
 	testingpkg.Equals(t, 2, internalNode.NumPairs())
 	testingpkg.Equals(t, 1, internalNode2.NumPairs())
+	testingpkg.Equals(t, nil, err)
 
 	tests := []struct {
 		key    uint64
