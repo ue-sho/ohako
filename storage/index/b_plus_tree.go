@@ -19,16 +19,33 @@ func NewBPlusTree(metaPageId page.PageID) *BPlusTree {
 // BPlusTreeインスタンスを生成する
 func CreateBPlusTree(bufmgr *buffer.BufferPoolManager) (*BPlusTree, error) {
 	metaPage := bufmgr.NewPage()
+	if metaPage == nil {
+		return nil, errors.New("failed to retrieve new page")
+	}
 	defer bufmgr.UnpinPage(metaPage.ID(), false)
+
 	meta := NewMeta(metaPage.Data()[:])
+	if meta == nil {
+		return nil, errors.New("meta page creation failed")
+	}
 
 	rootPage := bufmgr.NewPage()
+	if metaPage == nil {
+		return nil, errors.New("failed to retrieve new page")
+	}
 	defer bufmgr.UnpinPage(rootPage.ID(), false)
 
 	root := NewNode(rootPage.Data()[:])
+	if meta == nil {
+		return nil, errors.New("root page creation failed")
+	}
+
 	root.SetNodeType(NodeTypeLeaf)
 
 	leaf := NewLeafNode(root.body)
+	if leaf == nil {
+		return nil, errors.New("leaf node creation failed")
+	}
 	leaf.Initialize()
 
 	meta.header.rootPageId = rootPage.ID()
@@ -69,6 +86,9 @@ func (t *BPlusTree) fetchMetaPage(bufmgr *buffer.BufferPoolManager) *page.Page {
 // ルートページを取得する
 func (t *BPlusTree) fetchRootPage(bufmgr *buffer.BufferPoolManager) (*page.Page, error) {
 	metaBuffer := bufmgr.FetchPage(t.MetaPageId)
+	if metaBuffer == nil {
+		return nil, errors.New("failed to fetch root page")
+	}
 	defer bufmgr.UnpinPage(metaBuffer.ID(), false)
 
 	meta := NewMeta(metaBuffer.Data()[:])
@@ -80,6 +100,10 @@ func (t *BPlusTree) fetchRootPage(bufmgr *buffer.BufferPoolManager) (*page.Page,
 // 引数page(Node)からsearchModeで指定されたデータ見つかるまで再帰で探す
 func (t *BPlusTree) searchNode(bufmgr *buffer.BufferPoolManager, page *page.Page, searchMode SearchMode) (*BPlusTreeIter, error) {
 	node := NewNode(page.Data()[:])
+	if node == nil {
+		return nil, errors.New("node creation failed")
+	}
+
 	switch node.header.nodeType {
 	case NodeTypeLeaf:
 		leaf := NewLeafNode(node.body)
@@ -110,6 +134,10 @@ func (t *BPlusTree) Search(bufmgr *buffer.BufferPoolManager, searchMode SearchMo
 // 各NodeでのB+treeの挿入
 func (t *BPlusTree) insertNode(bufmgr *buffer.BufferPoolManager, buffer *page.Page, key []byte, value []byte) (bool, []byte, page.PageID, error) {
 	node := NewNode(buffer.Data()[:])
+	if node == nil {
+		return false, nil, page.InvalidPageID, errors.New("node creation failed")
+	}
+
 	switch node.header.nodeType {
 	case NodeTypeLeaf:
 		leaf := NewLeafNode(node.body)
