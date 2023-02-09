@@ -15,7 +15,7 @@ import (
 	testingpkg "github.com/ue-sho/ohako/testing"
 )
 
-const NumRows int = 10_000_000
+const NumRows int = 10000
 
 func tableCreate(bufmgr *buffer.BufferPoolManager) {
 	tbl := table.Table{
@@ -56,7 +56,7 @@ func tableCreate(bufmgr *buffer.BufferPoolManager) {
 
 func insertLargeData(bufmgr *buffer.BufferPoolManager, tbl *table.Table) {
 	for i := 0; i <= NumRows; i++ {
-		fmt.Println(i)
+		// fmt.Println(i)
 		pkey := make([]byte, 4)
 		binary.BigEndian.PutUint32(pkey, uint32(i))
 		md5Hash := md5.Sum(pkey)
@@ -97,9 +97,9 @@ func fetchData(bufmgr *buffer.BufferPoolManager) {
 
 func main() {
 	diskManager := disk.NewDiskManagerImpl("table_large.ohk")
-	poolSize := uint32(1_000_000)
+	poolSize := uint32(NumRows)
 	bufmgr := buffer.NewBufferPoolManager(poolSize, diskManager)
 
-	tableCreate(bufmgr)
-	// fetchData(bufmgr)
+	// tableCreate(bufmgr)
+	fetchData(bufmgr)
 }
