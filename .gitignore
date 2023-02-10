@@ -1,5 +1,9 @@
-# DB log file
+# ohako
+*.ohk
 data.log
+
+# vscode
+.vscode/
 
 # Binaries for programs and plugins
 *.exe
