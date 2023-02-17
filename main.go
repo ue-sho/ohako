@@ -100,6 +100,6 @@ func main() {
 	poolSize := uint32(NumRows)
 	bufmgr := buffer.NewBufferPoolManager(poolSize, diskManager)
 
-	// tableCreate(bufmgr)
-	fetchData(bufmgr)
+	tableCreate(bufmgr)
+	// fetchData(bufmgr)
 }
