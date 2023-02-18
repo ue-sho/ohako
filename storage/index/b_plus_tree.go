@@ -132,7 +132,7 @@ func (t *BPlusTree) Search(bufmgr *buffer.BufferPoolManager, searchMode SearchMo
 }
 
 // 各NodeでのB+treeの挿入
-func (t *BPlusTree) insertNode(bufmgr *buffer.BufferPoolManager, buffer *page.Page, key []byte, value []byte) (bool, []byte, page.PageID, error) {
+func (t *BPlusTree) insertNode(bufmgr *buffer.BufferPoolManager, buffer *page.Page, key []byte, value []byte) (overflow bool, overflowKey []byte, overflowPageId page.PageID, err error) {
 	node := NewNode(buffer.Data()[:])
 	if node == nil {
 		return false, nil, page.InvalidPageID, errors.New("node creation failed")
@@ -141,91 +141,100 @@ func (t *BPlusTree) insertNode(bufmgr *buffer.BufferPoolManager, buffer *page.Pa
 	switch node.header.nodeType {
 	case NodeTypeLeaf:
 		leaf := NewLeafNode(node.body)
-		slotId, result := leaf.SearchSlotId(key)
-		if result {
-			return false, nil, page.InvalidPageID, errors.New("duplicate key")
-		}
-
-		if err := leaf.Insert(slotId, key, value); err == nil {
-			buffer.SetIsDirty(true)
-			return false, nil, page.InvalidPageID, nil
-		} else {
-			// overflowした場合
-			// 新しいLeafNodeを作成
-			newLeafBuffer := bufmgr.NewPage()
-			defer bufmgr.UnpinPage(newLeafBuffer.ID(), true)
-
-			// leaf.prevLeafとleafの間に入れる
-			prevLeafPageId, err := leaf.PrevPageId()
-			if err == nil {
-				prevLeafBuffer := bufmgr.FetchPage(prevLeafPageId)
-				defer bufmgr.UnpinPage(prevLeafBuffer.ID(), true)
-
-				node := NewNode(prevLeafBuffer.Data()[:])
-				prefLeaf := NewLeafNode(node.body)
-				prefLeaf.SetNextPageId(newLeafBuffer.ID())
-				prevLeafBuffer.SetIsDirty(true)
-			}
-
-			leaf.SetPrevPageId(newLeafBuffer.ID())
-
-			// 新しいleafを初期化
-			// leafと新しいleafにSplitInsert
-			newLeafNode := NewNode(newLeafBuffer.Data()[:])
-			newLeafNode.SetNodeType(NodeTypeLeaf)
-			newLeaf := NewLeafNode(newLeafNode.body)
-			newLeaf.Initialize()
-			overflowKey, err := leaf.SplitInsert(newLeaf, key, value)
-			if err != nil {
-				return false, nil, page.InvalidPageID, err
-			}
-			newLeaf.SetNextPageId(buffer.ID())
-			newLeaf.SetPrevPageId(prevLeafPageId)
-			buffer.SetIsDirty(true)
-			return true, overflowKey, newLeafBuffer.ID(), nil
-		}
-
+		return t.nodeLeafInsert(leaf, bufmgr, buffer, key, value)
 	case NodeTypeInternal:
 		internalNode := NewInternalNode(node.body)
-		childIdx := internalNode.SearchChildIdx(key)
-		childPageId := internalNode.ChildAt(childIdx)
-		childNodeBuffer := bufmgr.FetchPage(childPageId)
-		defer bufmgr.UnpinPage(childNodeBuffer.ID(), true)
-
-		overflow, overflowKeyFromChild, overflowChildPageId, err := t.insertNode(bufmgr, childNodeBuffer, key, value)
-		if err != nil {
-			return false, nil, page.InvalidPageID, err
-		}
-
-		if overflow {
-			// internalNodeにInsert
-			if err := internalNode.Insert(childIdx, overflowKeyFromChild, overflowChildPageId); err == nil {
-				buffer.SetIsDirty(true)
-				return false, nil, page.InvalidPageID, nil
-			} else {
-				// それも入りきらなかった場合
-				// 新しいbranchを作成し、SplitInsert
-				newBranchBuffer := bufmgr.NewPage()
-				defer bufmgr.UnpinPage(newBranchBuffer.ID(), true)
-
-				newBranchNode := NewNode(newBranchBuffer.Data()[:])
-				newBranchNode.SetNodeType(NodeTypeInternal)
-				NewInternalNode := NewInternalNode(newBranchNode.body)
-				overflowKey, err := internalNode.SplitInsert(NewInternalNode, overflowKeyFromChild, overflowChildPageId)
-				if err != nil {
-					return false, nil, page.InvalidPageID, err
-				}
-				buffer.SetIsDirty(true)
-				newBranchBuffer.SetIsDirty(true)
-				return true, overflowKey, newBranchBuffer.ID(), nil
-			}
-		} else {
-			return false, nil, page.InvalidPageID, nil
-		}
-
+		return t.nodeInternalInsert(internalNode, bufmgr, buffer, key, value)
 	default:
 		return false, nil, page.InvalidPageID, errors.New("unreachable")
 	}
+}
+
+// nodeがLeafだった場合の挿入
+func (t *BPlusTree) nodeLeafInsert(leaf *LeafNode, bufmgr *buffer.BufferPoolManager, buffer *page.Page, key []byte, value []byte) (overflow bool, overflowKey []byte, overflowPageId page.PageID, err error) {
+	slotId, result := leaf.SearchSlotId(key)
+	if result {
+		return false, nil, page.InvalidPageID, errors.New("duplicate key")
+	}
+
+	if err := leaf.Insert(slotId, key, value); err == nil {
+		buffer.SetIsDirty(true)
+		return false, nil, page.InvalidPageID, nil
+	}
+
+	// overflowした場合
+	// 新しいLeafNodeを作成
+	newLeafBuffer := bufmgr.NewPage()
+	defer bufmgr.UnpinPage(newLeafBuffer.ID(), true)
+
+	// leaf.prevLeafとleafの間に入れる
+	prevLeafPageId, err := leaf.PrevPageId()
+	if err == nil {
+		prevLeafBuffer := bufmgr.FetchPage(prevLeafPageId)
+		defer bufmgr.UnpinPage(prevLeafBuffer.ID(), true)
+
+		node := NewNode(prevLeafBuffer.Data()[:])
+		prefLeaf := NewLeafNode(node.body)
+		prefLeaf.SetNextPageId(newLeafBuffer.ID())
+		prevLeafBuffer.SetIsDirty(true)
+	}
+
+	leaf.SetPrevPageId(newLeafBuffer.ID())
+
+	// 新しいleafを初期化
+	// leafと新しいleafにSplitInsert
+	newLeafNode := NewNode(newLeafBuffer.Data()[:])
+	newLeafNode.SetNodeType(NodeTypeLeaf)
+	newLeaf := NewLeafNode(newLeafNode.body)
+	newLeaf.Initialize()
+	overflowKey, err = leaf.SplitInsert(newLeaf, key, value)
+	if err != nil {
+		return false, nil, page.InvalidPageID, err
+	}
+	newLeaf.SetNextPageId(buffer.ID())
+	newLeaf.SetPrevPageId(prevLeafPageId)
+	buffer.SetIsDirty(true)
+	return true, overflowKey, newLeafBuffer.ID(), nil
+}
+
+// nodeがLeafだった場合の挿入
+func (t *BPlusTree) nodeInternalInsert(internalNode *InternalNode, bufmgr *buffer.BufferPoolManager, buffer *page.Page, key []byte, value []byte) (overflow bool, overflowKey []byte, overflowPageId page.PageID, err error) {
+	childIdx := internalNode.SearchChildIdx(key)
+	childPageId := internalNode.ChildAt(childIdx)
+	childNodeBuffer := bufmgr.FetchPage(childPageId)
+	defer bufmgr.UnpinPage(childNodeBuffer.ID(), true)
+
+	overflow, overflowKeyFromChild, overflowChildPageId, err := t.insertNode(bufmgr, childNodeBuffer, key, value)
+	if err != nil {
+		return false, nil, page.InvalidPageID, err
+	}
+
+	if !overflow {
+		return false, nil, page.InvalidPageID, nil
+	}
+
+	// overflowした場合
+	// internalNodeにInsert
+	if err := internalNode.Insert(childIdx, overflowKeyFromChild, overflowChildPageId); err == nil {
+		buffer.SetIsDirty(true)
+		return false, nil, page.InvalidPageID, nil
+	}
+
+	// それも入りきらなかった場合
+	// 新しいbranchを作成し、SplitInsert
+	newBranchBuffer := bufmgr.NewPage()
+	defer bufmgr.UnpinPage(newBranchBuffer.ID(), true)
+
+	newBranchNode := NewNode(newBranchBuffer.Data()[:])
+	newBranchNode.SetNodeType(NodeTypeInternal)
+	NewInternalNode := NewInternalNode(newBranchNode.body)
+	overflowKey, err = internalNode.SplitInsert(NewInternalNode, overflowKeyFromChild, overflowChildPageId)
+	if err != nil {
+		return false, nil, page.InvalidPageID, err
+	}
+	buffer.SetIsDirty(true)
+	newBranchBuffer.SetIsDirty(true)
+	return true, overflowKey, newBranchBuffer.ID(), nil
 }
 
 // 指定されたkey, valueをB+Treeに挿入する
