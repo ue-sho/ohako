@@ -15,7 +15,7 @@ import (
 	testingpkg "github.com/ue-sho/ohako/testing"
 )
 
-const NumRows int = 10000
+const NumRows int = 100000
 
 func tableCreate(bufmgr *buffer.BufferPoolManager) {
 	tbl := table.Table{
@@ -97,7 +97,7 @@ func fetchData(bufmgr *buffer.BufferPoolManager) {
 
 func main() {
 	diskManager := disk.NewDiskManagerImpl("table_large.ohk")
-	poolSize := uint32(NumRows)
+	poolSize := uint32(100)
 	bufmgr := buffer.NewBufferPoolManager(poolSize, diskManager)
 
 	tableCreate(bufmgr)

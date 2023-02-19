@@ -2,7 +2,7 @@
 
 <img src="./icon.jpeg" height="200px" width="200px">
 
-以下の2つを参考にして作られた自作RDMSです。
+以下を参考にして作られた自作RDMSです。
 
 * 米国カーネギーメロン大学（Carnegie Mellon University）で開講されている講義「[Database Systems](https://15445.courses.cs.cmu.edu/fall2022/)」
     * [bustub](https://github.com/cmu-db/bustub)
