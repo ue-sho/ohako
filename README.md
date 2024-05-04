@@ -2,9 +2,9 @@
 
 This is a self-made RDBMS created with reference to the following two sources:
 
-* Lectures on [Database Systems](https://15445.courses.cs.cmu.edu/fall2022/) offered at Carnegie Mellon University in the United States.
+* Lectures on [Database Systems](https://15445.courses.cs.cmu.edu/fall2022/) offered at Carnegie Mellon University
     * [bustub](https://github.com/cmu-db/bustub)
-* Feature 3 of WEB+DB PRESS Vol.122, 'Understanding RDBMS by Creating,' featuring:
+* Feature 3 of WEB+DB PRESS Vol.122, 'Understanding RDBMS by Creating'
     * [relly](https://github.com/KOBA789/relly)
 
 ## Features
